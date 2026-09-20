@@ -387,10 +387,16 @@ function App() {
           </div>
 
           {matches.length === 0 ? (
-            <p className="empty">
-              No one else is going there yet. Your ride is posted — this screen
-              updates when someone joins.
-            </p>
+            <div className="waiting-state">
+              <span className="waiting-state__pulse" aria-hidden="true" />
+              <div>
+                <p className="waiting-state__title">You&apos;re on the board</p>
+                <p className="waiting-state__copy">
+                  Waiting for someone going to {currentRide.destination}. This
+                  screen updates when they show up.
+                </p>
+              </div>
+            </div>
           ) : (
             <ul className="card-list">
               {matches.map((match) => (
