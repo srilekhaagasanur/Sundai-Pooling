@@ -20,6 +20,35 @@ const DESTINATIONS = [
   "Central Square in Cambridge",
 ];
 
+function getStatusChip(status, matchCount = 0) {
+  if (status === "locked") {
+    return { label: "Locked", tone: "locked" };
+  }
+  if (status === "pending") {
+    return { label: "Confirm", tone: "confirm" };
+  }
+  if (status === "open") {
+    if (matchCount === 0) {
+      return { label: "Waiting for pair", tone: "waiting" };
+    }
+    return { label: "Open", tone: "open" };
+  }
+  return null;
+}
+
+function StatusChip({ status, matchCount = 0 }) {
+  const chip = getStatusChip(status, matchCount);
+  if (!chip) {
+    return null;
+  }
+
+  return (
+    <span className={`status-chip status-chip--${chip.tone}`}>
+      {chip.label}
+    </span>
+  );
+}
+
 function App() {
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
@@ -252,7 +281,10 @@ function App() {
 
       {status === "locked" ? (
         <div className="matches paired locked">
-          <h2>You&apos;re locked in!</h2>
+          <div className="panel-header">
+            <h2>You&apos;re locked in!</h2>
+            <StatusChip status="locked" />
+          </div>
           <p className="empty">
             Both confirmed. Going together to {currentRide.destination}.
           </p>
@@ -269,7 +301,10 @@ function App() {
 
       {status === "pending" ? (
         <div className="matches paired">
-          <h2>Confirm your ride</h2>
+          <div className="panel-header">
+            <h2>Confirm your ride</h2>
+            <StatusChip status="pending" />
+          </div>
           <p className="empty">
             Pair found for {currentRide.destination}. Both people must confirm.
             Leaving will unpair both of you.
@@ -308,7 +343,10 @@ function App() {
 
       {status === "open" && currentRide ? (
         <div className="matches">
-          <h2>Matches for {currentRide.destination}</h2>
+          <div className="panel-header">
+            <h2>Matches for {currentRide.destination}</h2>
+            <StatusChip status="open" matchCount={matches.length} />
+          </div>
 
           {matches.length === 0 ? (
             <p className="empty">

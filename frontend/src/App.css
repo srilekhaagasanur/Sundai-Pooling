@@ -75,8 +75,48 @@ button:disabled {
 }
 
 .matches h2 {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 20px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.status-chip--open {
+  background: #e8f1ff;
+  color: #1d4f91;
+}
+
+.status-chip--waiting {
+  background: #fff4db;
+  color: #8a5a00;
+}
+
+.status-chip--confirm {
+  background: #fff0e6;
+  color: #9a3412;
+}
+
+.status-chip--locked {
+  background: #e6f6ec;
+  color: #0a7a32;
 }
 
 .matches .empty {
