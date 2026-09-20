@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
+const API_BASE = "http://127.0.0.1:8000";
 
 const DESTINATIONS = [
   "Ashdown House - 235 Albany St",
@@ -14,21 +15,35 @@ const DESTINATIONS = [
 function App() {
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
+  const [currentRide, setCurrentRide] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!destination) {
-      alert("Please choose a destination.");
+    if (!name.trim()) {
+      setError("Please enter your name.");
       return;
     }
 
+    if (!destination) {
+      setError("Please choose a destination.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setMatches([]);
+    setCurrentRide(null);
+
     const ride = {
-      name: name,
+      name: name.trim(),
       source: FIXED_ORIGIN,
       destination: destination,
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/rides", {
+      const createResponse = await fetch(`${API_BASE}/rides`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -36,14 +51,28 @@ function App() {
         body: JSON.stringify(ride),
       });
 
-      const data = await response.json();
+      if (!createResponse.ok) {
+        throw new Error("Could not create ride.");
+      }
 
-      console.log("Ride created:", data);
+      const createdRide = await createResponse.json();
+      setCurrentRide(createdRide);
 
-      alert("Ride created successfully!");
-    } catch (error) {
-      console.error("Error creating ride:", error);
-      alert("Something went wrong.");
+      const matchesResponse = await fetch(
+        `${API_BASE}/rides/${createdRide.id}/matches`
+      );
+
+      if (!matchesResponse.ok) {
+        throw new Error("Could not load matches.");
+      }
+
+      const matchData = await matchesResponse.json();
+      setMatches(Array.isArray(matchData) ? matchData : []);
+    } catch (err) {
+      console.error("Error finding matches:", err);
+      setError("Something went wrong. Is the backend running?");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,11 +94,7 @@ function App() {
 
         <label>From</label>
 
-        <input
-          type="text"
-          value={FIXED_ORIGIN}
-          disabled
-        />
+        <input type="text" value={FIXED_ORIGIN} disabled />
 
         <label>Destination</label>
 
@@ -87,10 +112,34 @@ function App() {
           ))}
         </select>
 
-        <button onClick={handleSubmit}>
-          Find Ride Matches
+        <button onClick={handleSubmit} disabled={loading}>
+          {loading ? "Finding matches..." : "Find Ride Matches"}
         </button>
+
+        {error ? <p className="error">{error}</p> : null}
       </div>
+
+      {currentRide ? (
+        <div className="matches">
+          <h2>Matches for {currentRide.destination}</h2>
+
+          {matches.length === 0 ? (
+            <p className="empty">
+              No one else is going there yet. Your ride is posted — check back
+              when others join.
+            </p>
+          ) : (
+            <ul>
+              {matches.map((match) => (
+                <li key={match.id}>
+                  <strong>{match.name}</strong>
+                  <span>{match.destination}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
