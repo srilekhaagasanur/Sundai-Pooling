@@ -79,6 +79,15 @@ h1 {
   line-height: 1.4;
 }
 
+.places-autocomplete {
+  width: 100%;
+}
+
+.places-autocomplete gmp-place-autocomplete {
+  width: 100%;
+  display: block;
+}
+
 .ride-form {
   background: white;
   padding: 30px;

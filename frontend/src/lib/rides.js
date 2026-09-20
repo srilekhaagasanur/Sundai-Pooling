@@ -6,7 +6,15 @@ function rpcErrorMessage(error) {
   return error?.message || "Something went wrong with Supabase.";
 }
 
-export async function createRide({ userId, name, source, destination }) {
+export async function createRide({
+  userId,
+  name,
+  source,
+  destination,
+  placeId = null,
+  destLat = null,
+  destLng = null,
+}) {
   const { data, error } = await supabase
     .from("rides")
     .insert({
@@ -14,6 +22,9 @@ export async function createRide({ userId, name, source, destination }) {
       name,
       source,
       destination,
+      place_id: placeId,
+      dest_lat: destLat,
+      dest_lng: destLng,
       status: "open",
       members: [{ name, user_id: userId, confirmed: false }],
     })
@@ -56,10 +67,18 @@ export async function findOpenRidesByUserId(userId) {
   return data || [];
 }
 
-export async function updateOpenRideDestination(rideId, destination) {
+export async function updateOpenRideDestination(
+  rideId,
+  { destination, placeId = null, destLat = null, destLng = null }
+) {
   const { data, error } = await supabase
     .from("rides")
-    .update({ destination })
+    .update({
+      destination,
+      place_id: placeId,
+      dest_lat: destLat,
+      dest_lng: destLng,
+    })
     .eq("id", rideId)
     .eq("status", "open")
     .select()
@@ -73,7 +92,15 @@ export async function updateOpenRideDestination(rideId, destination) {
 }
 
 /** Keep a single open ride per Google user; update destination in place. */
-export async function upsertOpenRide({ userId, name, source, destination }) {
+export async function upsertOpenRide({
+  userId,
+  name,
+  source,
+  destination,
+  placeId = null,
+  destLat = null,
+  destLng = null,
+}) {
   if (!userId) {
     throw new Error("Sign in required to post a ride.");
   }
@@ -92,13 +119,29 @@ export async function upsertOpenRide({ userId, name, source, destination }) {
   );
 
   if (keep) {
-    if (keep.destination === destination) {
+    const samePlace =
+      (placeId && keep.place_id === placeId) ||
+      (!placeId && keep.destination === destination);
+    if (samePlace) {
       return keep;
     }
-    return updateOpenRideDestination(keep.id, destination);
+    return updateOpenRideDestination(keep.id, {
+      destination,
+      placeId,
+      destLat,
+      destLng,
+    });
   }
 
-  return createRide({ userId, name, source, destination });
+  return createRide({
+    userId,
+    name,
+    source,
+    destination,
+    placeId,
+    destLat,
+    destLng,
+  });
 }
 
 /** Resume open/pending/joined state for this signed-in user after refresh. */
@@ -174,12 +217,17 @@ export async function findMatches(ride) {
     .from("rides")
     .select("*")
     .eq("status", "open")
-    .eq("destination", ride.destination)
     .neq("id", ride.id)
     .order("created_at", { ascending: true });
 
   if (ride.user_id) {
     query = query.neq("user_id", ride.user_id);
+  }
+
+  if (ride.place_id) {
+    query = query.eq("place_id", ride.place_id);
+  } else {
+    query = query.eq("destination", ride.destination);
   }
 
   const { data, error } = await query;

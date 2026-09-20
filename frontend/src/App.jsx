@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import DestinationAutocomplete from "./components/DestinationAutocomplete";
 import {
   displayNameFromUser,
   getSession,
@@ -19,14 +20,6 @@ import {
 } from "./lib/rides";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
-
-const DESTINATIONS = [
-  "Ashdown House - 235 Albany St",
-  "84 Mass Ave",
-  "Harvard Business School - 111 Western Avenue, Boston, MA 02163",
-  "Northeastern University - 360 Huntington Avenue, Boston, MA 02115",
-  "Central Square in Cambridge",
-];
 
 function getStatusChip(status, matchCount = 0) {
   if (status === "locked") {
@@ -63,6 +56,9 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [destination, setDestination] = useState("");
+  const [placeId, setPlaceId] = useState(null);
+  const [destLat, setDestLat] = useState(null);
+  const [destLng, setDestLng] = useState(null);
   const [currentRide, setCurrentRide] = useState(null);
   const [myRideId, setMyRideId] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -78,7 +74,11 @@ function App() {
   const isPaired = status === "pending" || status === "locked";
   const hasOpenRide = status === "open" && Boolean(currentRide);
   const destinationDirty =
-    hasOpenRide && destination && destination !== currentRide.destination;
+    hasOpenRide &&
+    Boolean(destination) &&
+    (destination !== currentRide.destination ||
+      (placeId || null) !== (currentRide.place_id || null));
+  const canSubmit = Boolean(destination && (placeId || destLat != null));
   const myMember = currentRide?.members?.find(
     (member) => user?.id && member.user_id === user.id
   );
@@ -119,6 +119,9 @@ function App() {
       setMyRideId(null);
       setMatches([]);
       setDestination("");
+      setPlaceId(null);
+      setDestLat(null);
+      setDestLng(null);
       setRestoring(false);
       return;
     }
@@ -139,6 +142,9 @@ function App() {
         setCurrentRide(activeRide.ride);
         setMyRideId(activeRide.myRideId);
         setDestination(activeRide.ride.destination || "");
+        setPlaceId(activeRide.ride.place_id || null);
+        setDestLat(activeRide.ride.dest_lat ?? null);
+        setDestLng(activeRide.ride.dest_lng ?? null);
 
         if (activeRide.ride.status === "open") {
           const matchData = await findMatches(activeRide.ride);
@@ -231,6 +237,9 @@ function App() {
       setMyRideId(null);
       setMatches([]);
       setDestination("");
+      setPlaceId(null);
+      setDestLat(null);
+      setDestLng(null);
     } catch (err) {
       console.error("Error signing out:", err);
       setError(err.message || "Could not sign out.");
@@ -250,8 +259,8 @@ function App() {
       return;
     }
 
-    if (!destination) {
-      setError("Please choose a destination.");
+    if (!destination || (!placeId && destLat == null)) {
+      setError("Please pick a destination from the suggestions.");
       return;
     }
 
@@ -269,10 +278,16 @@ function App() {
         name: trimmedName,
         source: FIXED_ORIGIN,
         destination,
+        placeId,
+        destLat,
+        destLng,
       });
       setCurrentRide(ride);
       setMyRideId(ride.id);
       setDestination(ride.destination);
+      setPlaceId(ride.place_id || null);
+      setDestLat(ride.dest_lat ?? null);
+      setDestLng(ride.dest_lng ?? null);
 
       const matchData = await findMatches(ride);
       setMatches(matchData);
@@ -375,6 +390,9 @@ function App() {
     setMatches([]);
     setError("");
     setDestination("");
+    setPlaceId(null);
+    setDestLat(null);
+    setDestLng(null);
   };
 
   const partnerName =
@@ -437,25 +455,28 @@ function App() {
         <div className="origin-pill">{FIXED_ORIGIN}</div>
 
         <label>Destination</label>
-
-        <select
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
+        <DestinationAutocomplete
           disabled={isPaired}
-        >
-          <option value="" disabled>
-            Select a destination
-          </option>
-          {DESTINATIONS.map((place) => (
-            <option key={place} value={place}>
-              {place}
-            </option>
-          ))}
-        </select>
+          initialValue={destination}
+          onSelect={({ label, placeId: nextPlaceId, lat, lng }) => {
+            setDestination(label);
+            setPlaceId(nextPlaceId);
+            setDestLat(lat ?? null);
+            setDestLng(lng ?? null);
+            setError("");
+          }}
+        />
+        {destination ? (
+          <p className="form-hint">Selected: {destination}</p>
+        ) : (
+          <p className="form-hint">
+            Type and pick a place from Google suggestions.
+          </p>
+        )}
 
         <button
           onClick={handleSubmit}
-          disabled={loading || isPaired || restoring || !destination}
+          disabled={loading || isPaired || restoring || !canSubmit}
         >
           {loading
             ? hasOpenRide

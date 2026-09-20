@@ -51,6 +51,10 @@ If `rides` already exists, also run `supabase/user_id.sql` once so each ride can
 ## 5c. Confirm by user id (existing projects)
 Run `supabase/confirm_by_user.sql` once so join/confirm/leave match on `user_id` inside `members` (fixes same-display-name double confirm).
 
+## 5d. Places destination fields (existing projects)
+Run `supabase/places_dest.sql` once for `place_id` / `dest_lat` / `dest_lng`.  
+Add `VITE_GOOGLE_MAPS_API_KEY` to `frontend/.env` and Vercel (public browser key with HTTP referrer restrictions).
+
 ## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
 - Clear old `rides` rows between rounds if the board gets noisy.

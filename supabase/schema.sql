@@ -10,6 +10,9 @@ create table if not exists public.rides (
   members jsonb not null default '[]'::jsonb,
   joined_ride_id bigint references public.rides(id),
   user_id uuid references auth.users (id),
+  place_id text,
+  dest_lat double precision,
+  dest_lng double precision,
   created_at timestamptz not null default now()
 );
 
@@ -22,6 +25,10 @@ create index if not exists rides_user_id_idx
 create unique index if not exists rides_one_open_per_user_idx
   on public.rides (user_id)
   where status = 'open' and user_id is not null;
+
+create index if not exists rides_place_id_idx
+  on public.rides (place_id)
+  where place_id is not null;
 
 alter table public.rides enable row level security;
 
