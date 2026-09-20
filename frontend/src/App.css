@@ -131,3 +131,7 @@ button:disabled {
 .paired {
   border: 2px solid #111;
 }
+
+.locked {
+  border-color: #0a7a32;
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
@@ -17,13 +17,62 @@ function App() {
   const [destination, setDestination] = useState("");
   const [currentRide, setCurrentRide] = useState(null);
   const [matches, setMatches] = useState([]);
-  const [pairedRide, setPairedRide] = useState(null);
   const [loading, setLoading] = useState(false);
   const [joiningId, setJoiningId] = useState(null);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
 
+  const trimmedName = name.trim();
+  const status = currentRide?.status;
+  const isPaired = status === "pending" || status === "locked";
+  const myMember = currentRide?.members?.find(
+    (member) => member.name === trimmedName
+  );
+  const iConfirmed = Boolean(myMember?.confirmed);
+
+  useEffect(() => {
+    if (!currentRide?.id) {
+      return undefined;
+    }
+
+    if (!["open", "pending"].includes(currentRide.status)) {
+      return undefined;
+    }
+
+    const rideId = currentRide.id;
+
+    const refresh = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/rides/${rideId}`);
+        if (!response.ok) {
+          return;
+        }
+
+        const ride = await response.json();
+        setCurrentRide(ride);
+
+        if (ride.status === "open") {
+          const matchesResponse = await fetch(
+            `${API_BASE}/rides/${ride.id}/matches`
+          );
+          if (matchesResponse.ok) {
+            const matchData = await matchesResponse.json();
+            setMatches(Array.isArray(matchData) ? matchData : []);
+          }
+        } else {
+          setMatches([]);
+        }
+      } catch (err) {
+        console.error("Error refreshing ride:", err);
+      }
+    };
+
+    const intervalId = setInterval(refresh, 2000);
+    return () => clearInterval(intervalId);
+  }, [currentRide?.id, currentRide?.status]);
+
   const handleSubmit = async () => {
-    if (!name.trim()) {
+    if (!trimmedName) {
       setError("Please enter your name.");
       return;
     }
@@ -37,10 +86,9 @@ function App() {
     setLoading(true);
     setMatches([]);
     setCurrentRide(null);
-    setPairedRide(null);
 
     const ride = {
-      name: name.trim(),
+      name: trimmedName,
       source: FIXED_ORIGIN,
       destination: destination,
     };
@@ -102,7 +150,6 @@ function App() {
         throw new Error(data.detail || "Could not join ride.");
       }
 
-      setPairedRide(data);
       setMatches([]);
       setCurrentRide(data);
     } catch (err) {
@@ -110,6 +157,41 @@ function App() {
       setError(err.message || "Could not join that ride.");
     } finally {
       setJoiningId(null);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!currentRide || !trimmedName) {
+      return;
+    }
+
+    setError("");
+    setConfirming(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/rides/${currentRide.id}/confirm`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: trimmedName }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not confirm ride.");
+      }
+
+      setCurrentRide(data);
+    } catch (err) {
+      console.error("Error confirming ride:", err);
+      setError(err.message || "Could not confirm.");
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -127,7 +209,7 @@ function App() {
           placeholder="Enter your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={Boolean(pairedRide)}
+          disabled={isPaired}
         />
 
         <label>From</label>
@@ -139,7 +221,7 @@ function App() {
         <select
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          disabled={Boolean(pairedRide)}
+          disabled={isPaired}
         >
           <option value="" disabled>
             Select a destination
@@ -151,41 +233,69 @@ function App() {
           ))}
         </select>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading || Boolean(pairedRide)}
-        >
+        <button onClick={handleSubmit} disabled={loading || isPaired}>
           {loading ? "Finding matches..." : "Find Ride Matches"}
         </button>
 
         {error ? <p className="error">{error}</p> : null}
       </div>
 
-      {pairedRide ? (
-        <div className="matches paired">
-          <h2>You&apos;re paired!</h2>
+      {status === "locked" ? (
+        <div className="matches paired locked">
+          <h2>You&apos;re locked in!</h2>
           <p className="empty">
-            Going together to {pairedRide.destination} (2 people max).
+            Both confirmed. Going together to {currentRide.destination}.
           </p>
           <ul>
-            {pairedRide.members.map((member) => (
-              <li key={member}>
-                <strong>{member}</strong>
-                <span>{pairedRide.destination}</span>
+            {currentRide.members.map((member) => (
+              <li key={member.name}>
+                <strong>{member.name}</strong>
+                <span>Confirmed</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      {!pairedRide && currentRide ? (
+      {status === "pending" ? (
+        <div className="matches paired">
+          <h2>Confirm your ride</h2>
+          <p className="empty">
+            Pair found for {currentRide.destination}. Both people must confirm.
+          </p>
+          <ul>
+            {currentRide.members.map((member) => (
+              <li key={member.name} className="match-row">
+                <div>
+                  <strong>{member.name}</strong>
+                  <span>
+                    {member.confirmed ? "Confirmed" : "Waiting to confirm"}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={handleConfirm}
+            disabled={confirming || iConfirmed}
+          >
+            {iConfirmed
+              ? "Waiting for the other person..."
+              : confirming
+                ? "Confirming..."
+                : "Confirm"}
+          </button>
+        </div>
+      ) : null}
+
+      {status === "open" && currentRide ? (
         <div className="matches">
           <h2>Matches for {currentRide.destination}</h2>
 
           {matches.length === 0 ? (
             <p className="empty">
-              No one else is going there yet. Your ride is posted — check back
-              when others join.
+              No one else is going there yet. Your ride is posted — this screen
+              updates when someone joins.
             </p>
           ) : (
             <ul>
