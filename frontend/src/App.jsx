@@ -382,6 +382,9 @@ function App() {
       (member) => user?.id && member.user_id && member.user_id !== user.id
     )?.name || "your pair";
 
+  const memberLabel = (member) =>
+    user?.id && member.user_id === user.id ? "You" : member.name;
+
   if (!authReady) {
     return (
       <div className="container">
@@ -497,7 +500,9 @@ function App() {
                 className="person-card"
               >
                 <div className="person-card__body">
-                  <strong className="person-card__name">{member.name}</strong>
+                  <strong className="person-card__name">
+                    {memberLabel(member)}
+                  </strong>
                   <span className="person-card__meta">Ready to go</span>
                 </div>
                 <span className="person-card__badge person-card__badge--done">
@@ -532,7 +537,9 @@ function App() {
                 className="person-card"
               >
                 <div className="person-card__body">
-                  <strong className="person-card__name">{member.name}</strong>
+                  <strong className="person-card__name">
+                    {memberLabel(member)}
+                  </strong>
                   <span className="person-card__meta">
                     {currentRide.destination}
                   </span>
