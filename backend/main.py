@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from matching import is_time_match
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -20,7 +19,6 @@ class Ride(BaseModel):
     name: str
     source: str
     destination: str
-    departure_time: str
 
 
 @app.get("/")
@@ -75,10 +73,7 @@ def find_matches(ride_id: int):
             continue
 
 
-        if is_time_match(
-            current_ride["departure_time"],
-            ride["departure_time"]
-        ):
+        if ride["destination"] == current_ride["destination"]:
 
             matches.append(ride)
 

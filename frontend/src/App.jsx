@@ -14,7 +14,6 @@ const DESTINATIONS = [
 function App() {
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
-  const [departureTime, setDepartureTime] = useState("");
 
   const handleSubmit = async () => {
     if (!destination) {
@@ -26,7 +25,6 @@ function App() {
       name: name,
       source: FIXED_ORIGIN,
       destination: destination,
-      departure_time: departureTime,
     };
 
     try {
@@ -88,14 +86,6 @@ function App() {
             </option>
           ))}
         </select>
-
-        <label>Departure Time</label>
-
-        <input
-          type="time"
-          value={departureTime}
-          onChange={(e) => setDepartureTime(e.target.value)}
-        />
 
         <button onClick={handleSubmit}>
           Find Ride Matches
