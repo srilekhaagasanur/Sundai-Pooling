@@ -35,7 +35,7 @@ Guests can try a destination and see who’s on the board **before** signing in.
 ## Limitations
 
 - Fixed origin only (IHQ / 292 Main St) — not a general citywide pooler
-- Pairs of **2** riders only
+- Matching is limited to **2 people** per ride right now (no 3+ passenger pools)
 - “Nearby” is dropoff-to-dropoff distance (~2 miles), not “on my way / minimal detour”
 - Road distances use OSM via OpenRouteService (not Uber’s live ETA/fare)
 - Suggested stop order may still differ from what Uber shows on the road
