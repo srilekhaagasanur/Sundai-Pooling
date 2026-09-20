@@ -30,6 +30,8 @@ export default function DestinationAutocomplete({
 }) {
   const hostRef = useRef(null);
   const widgetRef = useRef(null);
+  const initialValueRef = useRef(initialValue);
+  initialValueRef.current = initialValue;
 
   useEffect(() => {
     if (!API_KEY || !hostRef.current) {
@@ -52,8 +54,9 @@ export default function DestinationAutocomplete({
         locationBias: ORIGIN_BIAS,
       });
       autocomplete.placeholder = "Search for a destination…";
-      if (initialValue) {
-        autocomplete.value = initialValue;
+      const seed = initialValueRef.current;
+      if (seed) {
+        autocomplete.value = seed;
       }
       if (disabled) {
         autocomplete.disabled = true;
@@ -87,6 +90,11 @@ export default function DestinationAutocomplete({
 
       hostRef.current.appendChild(autocomplete);
       widgetRef.current = autocomplete;
+
+      // Restore may finish after Places loads — apply latest value.
+      if (initialValueRef.current) {
+        autocomplete.value = initialValueRef.current;
+      }
     }
 
     mount().catch((err) => {
@@ -106,7 +114,7 @@ export default function DestinationAutocomplete({
 
   useEffect(() => {
     const widget = widgetRef.current;
-    if (!widget || initialValue == null) {
+    if (!widget || initialValue == null || initialValue === "") {
       return;
     }
     if (widget.value !== initialValue) {

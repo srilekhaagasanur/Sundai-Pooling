@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DestinationAutocomplete from "./DestinationAutocomplete";
 import GuestBoardMap from "./GuestBoardMap";
-import { publicRiderLabel } from "../lib/guestIntent";
+import { publicRiderLabel, saveGuestIntent } from "../lib/guestIntent";
 import {
   listOpenRides,
   previewMatchesForDestination,
@@ -245,6 +245,13 @@ export default function GuestHome({ onContinue, authLoading, error }) {
             setDestLat(lat ?? null);
             setDestLng(lng ?? null);
             setLocalError("");
+            // Persist immediately so OAuth / header Sign in keep the address.
+            saveGuestIntent({
+              destination: label,
+              placeId: nextPlaceId,
+              destLat: lat ?? null,
+              destLng: lng ?? null,
+            });
           }}
         />
         {destination ? (

@@ -14,6 +14,7 @@ import {
 } from "./lib/auth";
 import {
   clearGuestIntent,
+  guestIntentHasDestination,
   loadGuestIntent,
   saveGuestIntent,
 } from "./lib/guestIntent";
@@ -176,17 +177,72 @@ function App() {
 
         const intent = loadGuestIntent();
         clearGuestIntent();
+        const intentDest = guestIntentHasDestination(intent);
 
         if (activeRide) {
           setCurrentRide(activeRide.ride);
           setMyRideId(activeRide.myRideId);
-          setDestination(activeRide.ride.destination || "");
-          setPlaceId(activeRide.ride.place_id || null);
-          setDestLat(activeRide.ride.dest_lat ?? null);
-          setDestLng(activeRide.ride.dest_lng ?? null);
+
+          // Prefer the destination the guest just chose over an older open ride.
+          if (intentDest) {
+            setDestination(intent.destination || "");
+            setPlaceId(intent.placeId || null);
+            setDestLat(intent.destLat ?? null);
+            setDestLng(intent.destLng ?? null);
+          } else {
+            setDestination(activeRide.ride.destination || "");
+            setPlaceId(activeRide.ride.place_id || null);
+            setDestLat(activeRide.ride.dest_lat ?? null);
+            setDestLng(activeRide.ride.dest_lng ?? null);
+          }
 
           if (activeRide.ride.status === "open") {
-            // Guest came back to join someone while already open → try join.
+            if (
+              intentDest &&
+              (intent.action === "post" || intent.action === "join")
+            ) {
+              try {
+                const ride = await upsertOpenRide({
+                  userId: user.id,
+                  name: trimmedName,
+                  source: FIXED_ORIGIN,
+                  destination: intent.destination,
+                  placeId: intent.placeId || null,
+                  destLat: intent.destLat ?? null,
+                  destLng: intent.destLng ?? null,
+                });
+                if (!active) {
+                  return;
+                }
+                setCurrentRide(ride);
+                setMyRideId(ride.id);
+                setDestination(ride.destination);
+                setPlaceId(ride.place_id || null);
+                setDestLat(ride.dest_lat ?? null);
+                setDestLng(ride.dest_lng ?? null);
+
+                if (intent.action === "join" && intent.joinTargetId) {
+                  const paired = await joinRide(intent.joinTargetId, ride.id);
+                  if (active) {
+                    setMatches([]);
+                    setCurrentRide(paired);
+                  }
+                  return;
+                }
+
+                const matchData = await findMatches(ride);
+                if (active) {
+                  setMatches(matchData);
+                }
+                return;
+              } catch (err) {
+                console.error("Error applying guest intent to open ride:", err);
+                if (active) {
+                  setError(err.message || "Could not continue after sign-in.");
+                }
+              }
+            }
+
             if (
               intent?.joinTargetId &&
               intent.joinTargetId !== activeRide.ride.id
@@ -209,7 +265,17 @@ function App() {
               }
             }
 
-            const matchData = await findMatches(activeRide.ride);
+            const matchData = await findMatches(
+              intentDest
+                ? {
+                    ...activeRide.ride,
+                    destination: intent.destination,
+                    place_id: intent.placeId || null,
+                    dest_lat: intent.destLat ?? null,
+                    dest_lng: intent.destLng ?? null,
+                  }
+                : activeRide.ride
+            );
             if (active) {
               setMatches(matchData);
             }
@@ -218,10 +284,7 @@ function App() {
         }
 
         // No active ride — apply guest destination / join intent.
-        if (
-          intent?.destination &&
-          (intent.placeId || intent.destLat != null)
-        ) {
+        if (intentDest) {
           setDestination(intent.destination || "");
           setPlaceId(intent.placeId || null);
           setDestLat(intent.destLat ?? null);
@@ -348,7 +411,9 @@ function App() {
   };
 
   const handleSignIn = async () => {
-    await handleGuestContinue({ action: "browse" });
+    const draft = loadGuestIntent() || {};
+    const action = guestIntentHasDestination(draft) ? "post" : "browse";
+    await handleGuestContinue({ ...draft, action });
   };
 
   const handleSignOut = async () => {

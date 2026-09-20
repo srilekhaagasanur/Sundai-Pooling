@@ -2,6 +2,7 @@ const STORAGE_KEY = "ridematch_guest_intent";
 
 /**
  * Persist guest destination / join target across Google OAuth redirect.
+ * Uses localStorage so the draft survives the OAuth round-trip reliably.
  * @typedef {{
  *   destination?: string,
  *   placeId?: string | null,
@@ -14,7 +15,9 @@ const STORAGE_KEY = "ridematch_guest_intent";
 
 export function saveGuestIntent(intent) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(intent || {}));
+    const prev = loadGuestIntent() || {};
+    const next = { ...prev, ...(intent || {}) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch (err) {
     console.warn("Could not save guest intent:", err);
   }
@@ -22,9 +25,16 @@ export function saveGuestIntent(intent) {
 
 export function loadGuestIntent() {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return null;
+      // Migrate older sessionStorage drafts if present
+      const legacy = sessionStorage.getItem(STORAGE_KEY);
+      if (!legacy) {
+        return null;
+      }
+      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, legacy);
+      return JSON.parse(legacy);
     }
     return JSON.parse(raw);
   } catch {
@@ -34,10 +44,17 @@ export function loadGuestIntent() {
 
 export function clearGuestIntent() {
   try {
+    localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   } catch {
     // ignore
   }
+}
+
+export function guestIntentHasDestination(intent) {
+  return Boolean(
+    intent?.destination && (intent.placeId || intent.destLat != null)
+  );
 }
 
 /** Show first name + last initial for the public board. */
