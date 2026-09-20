@@ -130,16 +130,31 @@ export default function GuestHome({ onContinue, authLoading, error }) {
         <h2 className="guest-howto__title">How it works</h2>
         <ol className="guest-howto__steps">
           <li>
-            <strong>Pick your dropoff</strong>
-            <span>Everyone leaves from {ORIGIN_LABEL}.</span>
+            <span className="guest-howto__num" aria-hidden="true">
+              1
+            </span>
+            <div>
+              <strong>Pick your dropoff</strong>
+              <span>Everyone leaves from IHQ at 292 Main St.</span>
+            </div>
           </li>
           <li>
-            <strong>Match nearby</strong>
-            <span>We show riders within ~2 miles of your destination.</span>
+            <span className="guest-howto__num" aria-hidden="true">
+              2
+            </span>
+            <div>
+              <strong>Match nearby</strong>
+              <span>See riders within ~2 miles of your destination.</span>
+            </div>
           </li>
           <li>
-            <strong>Confirm &amp; ride</strong>
-            <span>Lock in, then open Uber with a smart stop order.</span>
+            <span className="guest-howto__num" aria-hidden="true">
+              3
+            </span>
+            <div>
+              <strong>Confirm &amp; open Uber</strong>
+              <span>Lock in, then share a multi-stop ride from IHQ.</span>
+            </div>
           </li>
         </ol>
         <p className="guest-board-count">

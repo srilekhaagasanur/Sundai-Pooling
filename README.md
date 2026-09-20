@@ -34,7 +34,7 @@ Guests can try a destination and see who’s on the board **before** signing in.
 
 ## Limitations
 
-- Fixed origin only (IHQ / 292 Main) — not a general citywide pooler
+- Fixed origin only (IHQ / 292 Main St) — not a general citywide pooler
 - Pairs of **2** riders only
 - “Nearby” is dropoff-to-dropoff distance (~2 miles), not “on my way / minimal detour”
 - Road distances use OSM via OpenRouteService (not Uber’s live ETA/fare)

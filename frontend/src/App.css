@@ -1,12 +1,17 @@
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f4f6f8;
+  font-family: "Figtree", "Segoe UI", sans-serif;
+  color: #111;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, #dce8e2 0%, transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, #e8eef5 0%, transparent 50%),
+    #f3f5f7;
+  min-height: 100vh;
 }
 
 .container {
   width: min(500px, calc(100% - 32px));
-  margin: 48px auto 80px;
+  margin: 40px auto 80px;
 }
 
 .site-header {
@@ -20,39 +25,44 @@ body {
   gap: 16px;
 }
 
-.site-header__eyebrow {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #667085;
-}
-
-.site-header h1,
-h1 {
+.site-header__brand h1 {
   margin: 0;
-  color: #000000;
-  font-size: clamp(42px, 10vw, 64px);
-  font-weight: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: "Syne", "Figtree", sans-serif;
+  font-weight: 800;
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
 
+.site-header__sundai {
+  font-size: clamp(18px, 4.2vw, 22px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3d6b5a;
+}
+
+.site-header__product {
+  font-size: clamp(40px, 10vw, 56px);
+  color: #0b0d10;
+}
+
 .site-header__location {
-  margin: 16px 0 0;
-  font-size: 20px;
+  margin: 18px 0 0;
+  font-size: 18px;
   font-weight: 400;
   line-height: 1.35;
   color: #111;
 }
 
 .site-header__location span {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .site-header__support {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 15px;
   font-weight: 400;
   line-height: 1.45;
@@ -95,32 +105,57 @@ h1 {
 }
 
 .guest-howto {
-  margin: 20px 0 8px;
-  padding: 16px 18px;
-  border-radius: 10px;
-  background: #fff;
+  margin: 22px 0 10px;
+  padding: 18px 18px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid #e4e7ec;
+  backdrop-filter: blur(6px);
 }
 
 .guest-howto__title {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  font-family: "Syne", "Figtree", sans-serif;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: #111;
 }
 
 .guest-howto__steps {
   margin: 0;
-  padding: 0 0 0 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .guest-howto__steps li {
   display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guest-howto__num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a7a32;
+  background: #e8f6ee;
+}
+
+.guest-howto__steps div {
+  display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .guest-howto__steps strong {
@@ -135,9 +170,11 @@ h1 {
 }
 
 .guest-board-count {
-  margin: 14px 0 0;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eef1f4;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0a7a32;
 }
 
@@ -187,11 +224,11 @@ h1 {
 }
 
 .ride-form {
-  background: white;
-  padding: 30px;
-  margin-top: 30px;
-  border-radius: 10px;
-
+  background: rgba(255, 255, 255, 0.92);
+  padding: 22px 20px;
+  margin-top: 14px;
+  border-radius: 12px;
+  border: 1px solid #e4e7ec;
   display: flex;
   flex-direction: column;
   gap: 12px;

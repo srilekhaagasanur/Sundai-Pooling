@@ -37,8 +37,10 @@ function SiteHeader({ actions = null }) {
     <header className="site-header">
       <div className="site-header__row">
         <div className="site-header__brand">
-          <p className="site-header__eyebrow">Today&apos;s SundAI</p>
-          <h1>RideMatch</h1>
+          <h1>
+            <span className="site-header__sundai">SundAI</span>
+            <span className="site-header__product">Cab Pool</span>
+          </h1>
         </div>
         {actions}
       </div>
@@ -46,7 +48,7 @@ function SiteHeader({ actions = null }) {
         Leaving <span>{ORIGIN_LABEL}</span>
       </p>
       <p className="site-header__support">
-        Find someone headed your way and share a ride.
+        Match someone headed near you and share an Uber from the meetup.
       </p>
     </header>
   );
