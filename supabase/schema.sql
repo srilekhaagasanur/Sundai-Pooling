@@ -157,23 +157,27 @@ begin
     raise exception 'Destinations are too far apart to pair';
   end if;
 
-  if coalesce(target.members->0->>'user_id', '') = '' then
-    target.members := jsonb_build_array(
+  update public.rides
+  set
+    members = jsonb_build_array(
       jsonb_build_object(
         'name', target.name,
         'user_id', target.user_id,
-        'confirmed', false
+        'confirmed', false,
+        'destination', target.destination,
+        'dest_lat', target.dest_lat,
+        'dest_lng', target.dest_lng,
+        'place_id', target.place_id
       )
-    );
-  end if;
-
-  update public.rides
-  set
-    members = target.members || jsonb_build_array(
+    ) || jsonb_build_array(
       jsonb_build_object(
         'name', joiner.name,
         'user_id', joiner.user_id,
-        'confirmed', false
+        'confirmed', false,
+        'destination', joiner.destination,
+        'dest_lat', joiner.dest_lat,
+        'dest_lng', joiner.dest_lng,
+        'place_id', joiner.place_id
       )
     ),
     status = 'pending'
@@ -303,7 +307,11 @@ begin
       jsonb_build_object(
         'name', pair.name,
         'user_id', pair.user_id,
-        'confirmed', false
+        'confirmed', false,
+        'destination', pair.destination,
+        'dest_lat', pair.dest_lat,
+        'dest_lng', pair.dest_lng,
+        'place_id', pair.place_id
       )
     )
   where id = pair_ride_id
@@ -317,7 +325,11 @@ begin
       jsonb_build_object(
         'name', joiner.name,
         'user_id', joiner.user_id,
-        'confirmed', false
+        'confirmed', false,
+        'destination', joiner.destination,
+        'dest_lat', joiner.dest_lat,
+        'dest_lng', joiner.dest_lng,
+        'place_id', joiner.place_id
       )
     )
   where id = joiner.id

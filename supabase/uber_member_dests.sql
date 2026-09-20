@@ -1,32 +1,5 @@
--- Allow joining nearby destinations (not only exact address strings).
--- Also stores each rider's dropoff on members for Uber multi-stop links.
--- Run in Supabase SQL Editor once.
--- Note: if you already ran this earlier, also run uber_member_dests.sql
--- (or re-run this file) so join_ride writes destination fields onto members.
-
-create or replace function public.dest_distance_m(
-  lat1 double precision,
-  lng1 double precision,
-  lat2 double precision,
-  lng2 double precision
-)
-returns double precision
-language sql
-immutable
-as $$
-  select case
-    when lat1 is null or lng1 is null or lat2 is null or lng2 is null then null
-    else (
-      2 * 6371000 * asin(
-        sqrt(
-          power(sin(radians(lat2 - lat1) / 2), 2) +
-          cos(radians(lat1)) * cos(radians(lat2)) *
-          power(sin(radians(lng2 - lng1) / 2), 2)
-        )
-      )
-    )
-  end;
-$$;
+-- Store each rider's dropoff on members so locked rides can build multi-stop Uber links.
+-- Run in Supabase SQL Editor once (replaces join_ride / leave_pair member shape).
 
 create or replace function public.join_ride(
   target_id bigint,
@@ -131,6 +104,92 @@ begin
 end;
 $$;
 
-grant execute on function public.dest_distance_m(double precision, double precision, double precision, double precision)
-  to anon, authenticated;
+create or replace function public.leave_pair(
+  pair_ride_id bigint,
+  rider_user_id uuid
+)
+returns public.rides
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  pair public.rides;
+  joiner public.rides;
+  poster_ride public.rides;
+  leaving_is_poster boolean;
+begin
+  if auth.uid() is null or auth.uid() <> rider_user_id then
+    raise exception 'Not authenticated';
+  end if;
+
+  select * into pair from public.rides where id = pair_ride_id for update;
+  if not found then
+    raise exception 'Ride not found';
+  end if;
+
+  if pair.status <> 'pending' then
+    raise exception 'Only pending pairs can be left';
+  end if;
+
+  select * into joiner
+  from public.rides
+  where joined_ride_id = pair_ride_id and status = 'joined'
+  for update;
+
+  if not found then
+    raise exception 'Could not find the other rider';
+  end if;
+
+  leaving_is_poster := (pair.user_id = rider_user_id);
+
+  if not leaving_is_poster and joiner.user_id is distinct from rider_user_id then
+    raise exception 'You are not part of this ride';
+  end if;
+
+  update public.rides
+  set
+    status = 'open',
+    members = jsonb_build_array(
+      jsonb_build_object(
+        'name', pair.name,
+        'user_id', pair.user_id,
+        'confirmed', false,
+        'destination', pair.destination,
+        'dest_lat', pair.dest_lat,
+        'dest_lng', pair.dest_lng,
+        'place_id', pair.place_id
+      )
+    )
+  where id = pair_ride_id
+  returning * into poster_ride;
+
+  update public.rides
+  set
+    status = 'open',
+    joined_ride_id = null,
+    members = jsonb_build_array(
+      jsonb_build_object(
+        'name', joiner.name,
+        'user_id', joiner.user_id,
+        'confirmed', false,
+        'destination', joiner.destination,
+        'dest_lat', joiner.dest_lat,
+        'dest_lng', joiner.dest_lng,
+        'place_id', joiner.place_id
+      )
+    )
+  where id = joiner.id
+  returning * into joiner;
+
+  if leaving_is_poster then
+    return poster_ride;
+  end if;
+
+  return joiner;
+end;
+$$;
+
 grant execute on function public.join_ride(bigint, bigint) to anon, authenticated;
+grant execute on function public.leave_pair(bigint, uuid) to anon, authenticated;
+notify pgrst, 'reload schema';

@@ -27,7 +27,17 @@ export async function createRide({
       dest_lat: destLat,
       dest_lng: destLng,
       status: "open",
-      members: [{ name, user_id: userId, confirmed: false }],
+      members: [
+        {
+          name,
+          user_id: userId,
+          confirmed: false,
+          destination,
+          dest_lat: destLat,
+          dest_lng: destLng,
+          place_id: placeId,
+        },
+      ],
     })
     .select()
     .single();
@@ -70,16 +80,39 @@ export async function findOpenRidesByUserId(userId) {
 
 export async function updateOpenRideDestination(
   rideId,
-  { destination, placeId = null, destLat = null, destLng = null }
+  {
+    destination,
+    placeId = null,
+    destLat = null,
+    destLng = null,
+    name = null,
+    userId = null,
+  }
 ) {
+  const patch = {
+    destination,
+    place_id: placeId,
+    dest_lat: destLat,
+    dest_lng: destLng,
+  };
+
+  if (name || userId) {
+    patch.members = [
+      {
+        name,
+        user_id: userId,
+        confirmed: false,
+        destination,
+        dest_lat: destLat,
+        dest_lng: destLng,
+        place_id: placeId,
+      },
+    ];
+  }
+
   const { data, error } = await supabase
     .from("rides")
-    .update({
-      destination,
-      place_id: placeId,
-      dest_lat: destLat,
-      dest_lng: destLng,
-    })
+    .update(patch)
     .eq("id", rideId)
     .eq("status", "open")
     .select()
@@ -173,6 +206,8 @@ async function upsertOpenRideClient({
       placeId,
       destLat,
       destLng,
+      name,
+      userId,
     });
   }
 
@@ -202,6 +237,8 @@ async function upsertOpenRideClient({
       placeId,
       destLat,
       destLng,
+      name,
+      userId,
     });
   }
 }

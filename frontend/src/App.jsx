@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import {
+  buildUberLookingLink,
+  IHQ_PICKUP,
+  orderDropoffs,
+  shortStopLabel,
+  stopsFromLockedRide,
+} from "./lib/uber";
 import DestinationAutocomplete from "./components/DestinationAutocomplete";
 import {
   displayNameFromUser,
@@ -437,6 +444,41 @@ function App() {
   const memberLabel = (member) =>
     user?.id && member.user_id === user.id ? "You" : member.name;
 
+  const uberStopPlan = (() => {
+    if (status !== "locked" || !currentRide) {
+      return null;
+    }
+    const stops = stopsFromLockedRide(currentRide);
+    if (stops.length === 0) {
+      return null;
+    }
+    if (stops.length === 1) {
+      const link = buildUberLookingLink({ drops: stops });
+      return {
+        sameStop: true,
+        recommendedLabel: shortStopLabel(stops[0]),
+        recommendedLink: link,
+        reverseLink: null,
+        reverseLabel: null,
+      };
+    }
+    const ordered = orderDropoffs(IHQ_PICKUP, stops[0], stops[1]);
+    if (!ordered) {
+      return null;
+    }
+    return {
+      sameStop: ordered.sameStop,
+      recommendedLabel: ordered.recommended
+        .map(shortStopLabel)
+        .join(" → "),
+      reverseLabel: ordered.reverse.map(shortStopLabel).join(" → "),
+      recommendedLink: buildUberLookingLink({ drops: ordered.recommended }),
+      reverseLink: ordered.sameStop
+        ? null
+        : buildUberLookingLink({ drops: ordered.reverse }),
+    };
+  })();
+
   if (!authReady) {
     return (
       <div className="container">
@@ -541,11 +583,30 @@ function App() {
           </div>
 
           <div className="locked-win__route">
-            <span className="locked-win__label">Going to</span>
-            <strong className="locked-win__destination">
-              {currentRide.destination}
-            </strong>
-            <span className="locked-win__from">From {FIXED_ORIGIN}</span>
+            <span className="locked-win__label">From</span>
+            <strong className="locked-win__destination">{ORIGIN_LABEL}</strong>
+            {uberStopPlan?.sameStop ? (
+              <>
+                <span className="locked-win__label">Going to</span>
+                <strong className="locked-win__destination">
+                  {currentRide.destination}
+                </strong>
+              </>
+            ) : (
+              <>
+                <span className="locked-win__label">Dropoffs</span>
+                <ul className="locked-win__stops">
+                  {(currentRide.members || []).map((member) => (
+                    <li key={member.user_id || member.name}>
+                      <strong>{memberLabel(member)}</strong>
+                      <span>
+                        {member.destination || currentRide.destination}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
 
           <ul className="card-list">
@@ -568,6 +629,43 @@ function App() {
           </ul>
 
           <p className="locked-win__note">Both confirmed — you&apos;re set.</p>
+
+          {uberStopPlan?.recommendedLink ? (
+            <div className="uber-actions">
+              <a
+                className="uber-button"
+                href={uberStopPlan.recommendedLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in Uber
+                {uberStopPlan.recommendedLabel
+                  ? ` · ${uberStopPlan.recommendedLabel}`
+                  : ""}
+              </a>
+              {uberStopPlan.reverseLink ? (
+                <>
+                  <p className="form-hint">
+                    Suggested order is by straight-line distance — Uber&apos;s
+                    road route may differ.
+                  </p>
+                  <a
+                    className="secondary-button uber-button--alt"
+                    href={uberStopPlan.reverseLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Reverse stops · {uberStopPlan.reverseLabel}
+                  </a>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="form-hint">
+              Uber link needs destination coordinates — re-pair with Places
+              picks if this is missing.
+            </p>
+          )}
 
           <button className="secondary-button" onClick={handleStartOver}>
             Start over

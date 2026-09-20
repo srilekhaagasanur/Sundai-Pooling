@@ -61,6 +61,9 @@ Run `supabase/nearby_join.sql` once so `join_ride` allows destinations within ~1
 ## 5f. Atomic open-ride upsert (existing projects)
 Run `supabase/upsert_open_ride.sql` once so posting/updating never hits `rides_one_open_per_user_idx` races.
 
+## 5g. Member dropoffs for Uber multi-stop (existing projects)
+Run `supabase/uber_member_dests.sql` once so join/leave store each rider's destination on `members` (needed for IHQ → D1 → D2 links).
+
 ## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
 - Clear old `rides` rows between rounds if the board gets noisy.

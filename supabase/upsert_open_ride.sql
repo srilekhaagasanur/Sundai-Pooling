@@ -46,7 +46,11 @@ begin
         jsonb_build_object(
           'name', p_name,
           'user_id', p_user_id,
-          'confirmed', false
+          'confirmed', false,
+          'destination', p_destination,
+          'dest_lat', p_dest_lat,
+          'dest_lng', p_dest_lng,
+          'place_id', p_place_id
         )
       )
     where id = ride.id
@@ -79,7 +83,11 @@ begin
       jsonb_build_object(
         'name', p_name,
         'user_id', p_user_id,
-        'confirmed', false
+        'confirmed', false,
+        'destination', p_destination,
+        'dest_lat', p_dest_lat,
+        'dest_lng', p_dest_lng,
+        'place_id', p_place_id
       )
     )
   )
