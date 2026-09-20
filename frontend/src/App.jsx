@@ -748,7 +748,7 @@ function App() {
                 <p className="waiting-state__title">You&apos;re on the board</p>
                 <p className="waiting-state__copy">
                   Waiting for someone headed near {currentRide.destination}.
-                  We&apos;ll show people within about a mile of your dropoff.
+                  We&apos;ll show people within ~2 miles of your dropoff.
                 </p>
               </div>
             </div>
