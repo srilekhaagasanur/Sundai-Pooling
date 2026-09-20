@@ -1,10 +1,11 @@
 import { haversineMeters } from "./matching/distance";
 
 export const IHQ_PICKUP = {
-  latitude: 42.3639,
-  longitude: -71.0851,
-  addressLine1: "IHQ",
-  addressLine2: "292 Main St, Cambridge, MA 02142",
+  // 292 Main St / Kendall Open Space (not 55 Broadway next door)
+  latitude: 42.36228,
+  longitude: -71.08586,
+  addressLine1: "292 Main St",
+  addressLine2: "Cambridge, MA 02142",
 };
 
 function encodeLocation(loc) {

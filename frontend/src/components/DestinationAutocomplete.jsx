@@ -5,7 +5,7 @@ const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 // Bias suggestions toward Kendall / 292 Main area
 const ORIGIN_BIAS = {
-  center: { lat: 42.3635, lng: -71.0843 },
+  center: { lat: 42.36228, lng: -71.08586 },
   radius: 25000,
 };
 
