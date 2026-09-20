@@ -288,11 +288,18 @@ function App() {
           <p className="empty">
             Both confirmed. Going together to {currentRide.destination}.
           </p>
-          <ul>
+          <ul className="card-list">
             {currentRide.members.map((member) => (
-              <li key={member.name}>
-                <strong>{member.name}</strong>
-                <span>Confirmed</span>
+              <li key={member.name} className="person-card">
+                <div className="person-card__body">
+                  <strong className="person-card__name">{member.name}</strong>
+                  <span className="person-card__meta">
+                    {currentRide.destination}
+                  </span>
+                </div>
+                <span className="person-card__badge person-card__badge--done">
+                  ✓ Confirmed
+                </span>
               </li>
             ))}
           </ul>
@@ -309,15 +316,24 @@ function App() {
             Pair found for {currentRide.destination}. Both people must confirm.
             Leaving will unpair both of you.
           </p>
-          <ul>
+          <ul className="card-list">
             {currentRide.members.map((member) => (
-              <li key={member.name} className="match-row">
-                <div>
-                  <strong>{member.name}</strong>
-                  <span>
-                    {member.confirmed ? "Confirmed" : "Waiting to confirm"}
+              <li key={member.name} className="person-card">
+                <div className="person-card__body">
+                  <strong className="person-card__name">{member.name}</strong>
+                  <span className="person-card__meta">
+                    {currentRide.destination}
                   </span>
                 </div>
+                <span
+                  className={`person-card__badge ${
+                    member.confirmed
+                      ? "person-card__badge--done"
+                      : "person-card__badge--wait"
+                  }`}
+                >
+                  {member.confirmed ? "✓ Confirmed" : "Waiting"}
+                </span>
               </li>
             ))}
           </ul>
@@ -354,12 +370,14 @@ function App() {
               updates when someone joins.
             </p>
           ) : (
-            <ul>
+            <ul className="card-list">
               {matches.map((match) => (
-                <li key={match.id} className="match-row">
-                  <div>
-                    <strong>{match.name}</strong>
-                    <span>{match.destination}</span>
+                <li key={match.id} className="person-card person-card--action">
+                  <div className="person-card__body">
+                    <strong className="person-card__name">{match.name}</strong>
+                    <span className="person-card__meta">
+                      {match.destination}
+                    </span>
                   </div>
                   <button
                     className="join-button"
