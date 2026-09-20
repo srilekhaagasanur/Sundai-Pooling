@@ -234,6 +234,18 @@ function App() {
     }
   };
 
+  const handleStartOver = () => {
+    setCurrentRide(null);
+    setMyRideId(null);
+    setMatches([]);
+    setError("");
+    setDestination("");
+  };
+
+  const partnerName =
+    currentRide?.members?.find((member) => member.name !== trimmedName)
+      ?.name || "your pair";
+
   return (
     <div className="container">
       <h1>RideMatch 🚗</h1>
@@ -280,22 +292,26 @@ function App() {
       </div>
 
       {status === "locked" ? (
-        <div className="matches paired locked">
+        <div className="matches paired locked locked-win">
           <div className="panel-header">
-            <h2>You&apos;re locked in!</h2>
+            <h2>You&apos;re locked in with {partnerName}</h2>
             <StatusChip status="locked" />
           </div>
-          <p className="empty">
-            Both confirmed. Going together to {currentRide.destination}.
-          </p>
+
+          <div className="locked-win__route">
+            <span className="locked-win__label">Going to</span>
+            <strong className="locked-win__destination">
+              {currentRide.destination}
+            </strong>
+            <span className="locked-win__from">From {FIXED_ORIGIN}</span>
+          </div>
+
           <ul className="card-list">
             {currentRide.members.map((member) => (
               <li key={member.name} className="person-card">
                 <div className="person-card__body">
                   <strong className="person-card__name">{member.name}</strong>
-                  <span className="person-card__meta">
-                    {currentRide.destination}
-                  </span>
+                  <span className="person-card__meta">Ready to go</span>
                 </div>
                 <span className="person-card__badge person-card__badge--done">
                   ✓ Confirmed
@@ -303,6 +319,12 @@ function App() {
               </li>
             ))}
           </ul>
+
+          <p className="locked-win__note">Both confirmed — you&apos;re set.</p>
+
+          <button className="secondary-button" onClick={handleStartOver}>
+            Start over
+          </button>
         </div>
       ) : null}
 
