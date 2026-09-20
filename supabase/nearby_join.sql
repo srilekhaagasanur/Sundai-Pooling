@@ -85,7 +85,7 @@ begin
       target.dest_lat, target.dest_lng,
       joiner.dest_lat, joiner.dest_lng
     );
-    if dist_m is not null and dist_m <= 1500 then
+    if dist_m is not null and dist_m <= 3219 then
       nearby_ok := true;
     end if;
   end if;

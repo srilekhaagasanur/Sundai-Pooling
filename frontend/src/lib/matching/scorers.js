@@ -1,7 +1,7 @@
 import { formatDistanceLabel, haversineMeters } from "./distance";
 
-/** Default nearby radius for haversine matching (~1.5 km). */
-export const NEARBY_RADIUS_METERS = 1500;
+/** Default nearby radius for haversine matching (~2 miles). */
+export const NEARBY_RADIUS_METERS = Math.round(2 * 1609.344);
 
 /**
  * Score a candidate against my ride.
