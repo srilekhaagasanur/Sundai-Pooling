@@ -1,15 +1,30 @@
 import { useState } from "react";
 import "./App.css";
 
+const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
+
+const DESTINATIONS = [
+  "Ashdown House - 235 Albany St",
+  "84 Mass Ave",
+  "Harvard Business School - 111 Western Avenue, Boston, MA 02163",
+  "Northeastern University - 360 Huntington Avenue, Boston, MA 02115",
+  "Central Square in Cambridge",
+];
+
 function App() {
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
   const [departureTime, setDepartureTime] = useState("");
 
   const handleSubmit = async () => {
+    if (!destination) {
+      alert("Please choose a destination.");
+      return;
+    }
+
     const ride = {
       name: name,
-      source: "Northeastern University",
+      source: FIXED_ORIGIN,
       destination: destination,
       departure_time: departureTime,
     };
@@ -54,18 +69,25 @@ function App() {
 
         <input
           type="text"
-          value="Northeastern University"
+          value={FIXED_ORIGIN}
           disabled
         />
 
         <label>Destination</label>
 
-        <input
-          type="text"
-          placeholder="Enter destination"
+        <select
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-        />
+        >
+          <option value="" disabled>
+            Select a destination
+          </option>
+          {DESTINATIONS.map((place) => (
+            <option key={place} value={place}>
+              {place}
+            </option>
+          ))}
+        </select>
 
         <label>Departure Time</label>
 

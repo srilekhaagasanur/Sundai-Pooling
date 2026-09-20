@@ -24,12 +24,18 @@ h1 {
   gap: 12px;
 }
 
-input {
+input,
+select {
   padding: 12px;
   font-size: 16px;
 
   border: 1px solid #ccc;
   border-radius: 6px;
+  background: white;
+}
+
+select {
+  cursor: pointer;
 }
 
 button {
