@@ -21,6 +21,27 @@ import {
 } from "./lib/rides";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
+const ORIGIN_LABEL = "292 Main St, Cambridge (IHQ)";
+
+function SiteHeader({ actions = null }) {
+  return (
+    <header className="site-header">
+      <div className="site-header__row">
+        <div className="site-header__brand">
+          <p className="site-header__eyebrow">Today&apos;s SundAI</p>
+          <h1>RideMatch</h1>
+        </div>
+        {actions}
+      </div>
+      <p className="site-header__location">
+        Leaving <span>{ORIGIN_LABEL}</span>
+      </p>
+      <p className="site-header__support">
+        Find someone headed your way and share a ride.
+      </p>
+    </header>
+  );
+}
 
 function getStatusChip(status, matchCount = 0) {
   if (status === "locked") {
@@ -419,8 +440,8 @@ function App() {
   if (!authReady) {
     return (
       <div className="container">
-        <h1>RideMatch</h1>
-        <p>Loading…</p>
+        <SiteHeader />
+        <p className="loading-copy">Loading…</p>
       </div>
     );
   }
@@ -428,8 +449,7 @@ function App() {
   if (!user) {
     return (
       <div className="container">
-        <h1>RideMatch</h1>
-        <p>Leaving 292 Main · pair up for a ride.</p>
+        <SiteHeader />
 
         <div className="ride-form auth-card">
           <p className="auth-card__copy">
@@ -446,26 +466,27 @@ function App() {
 
   return (
     <div className="container">
-      <div className="top-bar">
-        <div>
-          <h1>RideMatch</h1>
-          <p>Leaving 292 Main · pair up for a ride.</p>
-        </div>
-        <div className="top-bar__user">
-          <span className="top-bar__name">{trimmedName}</span>
-          <button
-            className="secondary-button top-bar__signout"
-            onClick={handleSignOut}
-            disabled={authLoading}
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
+      <SiteHeader
+        actions={
+          <div className="top-bar__user">
+            <span className="top-bar__name">{trimmedName}</span>
+            <button
+              className="secondary-button top-bar__signout"
+              onClick={handleSignOut}
+              disabled={authLoading}
+            >
+              Sign out
+            </button>
+          </div>
+        }
+      />
 
       <div className="ride-form">
         <label>From</label>
-        <div className="origin-pill">{FIXED_ORIGIN}</div>
+        <div className="origin-pill">
+          <span className="origin-pill__kicker">Meetup</span>
+          <span className="origin-pill__value">{ORIGIN_LABEL}</span>
+        </div>
 
         <label>Destination</label>
         <DestinationAutocomplete
