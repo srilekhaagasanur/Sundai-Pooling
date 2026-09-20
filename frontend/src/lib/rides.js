@@ -83,3 +83,29 @@ export async function confirmRide(rideId, riderName) {
 
   return data;
 }
+
+export async function cancelRide(rideId, riderName) {
+  const { data, error } = await supabase.rpc("cancel_ride", {
+    ride_id: rideId,
+    rider_name: riderName,
+  });
+
+  if (error) {
+    throw new Error(rpcErrorMessage(error));
+  }
+
+  return data;
+}
+
+export async function leavePair(pairRideId, riderName) {
+  const { data, error } = await supabase.rpc("leave_pair", {
+    pair_ride_id: pairRideId,
+    rider_name: riderName,
+  });
+
+  if (error) {
+    throw new Error(rpcErrorMessage(error));
+  }
+
+  return data;
+}

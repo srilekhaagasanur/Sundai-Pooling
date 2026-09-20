@@ -135,3 +135,14 @@ button:disabled {
 .locked {
   border-color: #0a7a32;
 }
+
+.secondary-button {
+  background: white;
+  color: #111;
+  border: 1px solid #ccc;
+}
+
+.secondary-button:hover {
+  opacity: 1;
+  background: #f4f4f4;
+}

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import {
+  cancelRide,
   confirmRide,
   createRide,
   findMatches,
   getRide,
   joinRide,
+  leavePair,
 } from "./lib/rides";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
@@ -22,10 +24,12 @@ function App() {
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
   const [currentRide, setCurrentRide] = useState(null);
+  const [myRideId, setMyRideId] = useState(null);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [joiningId, setJoiningId] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState("");
 
   const trimmedName = name.trim();
@@ -49,12 +53,25 @@ function App() {
 
     const refresh = async () => {
       try {
-        const ride = await getRide(rideId);
+        let ride = await getRide(rideId);
+        const stillMember = (ride.members || []).some(
+          (member) => member.name === trimmedName
+        );
+
+        // Other person left the pair — switch back to your own open ride.
+        if (!stillMember && myRideId && myRideId !== ride.id) {
+          ride = await getRide(myRideId);
+        }
+
         setCurrentRide(ride);
 
         if (ride.status === "open") {
           const matchData = await findMatches(ride);
           setMatches(matchData);
+        } else if (ride.status === "cancelled") {
+          setMatches([]);
+          setCurrentRide(null);
+          setMyRideId(null);
         } else {
           setMatches([]);
         }
@@ -65,7 +82,7 @@ function App() {
 
     const intervalId = setInterval(refresh, 2000);
     return () => clearInterval(intervalId);
-  }, [currentRide?.id, currentRide?.status]);
+  }, [currentRide?.id, currentRide?.status, myRideId, trimmedName]);
 
   const handleSubmit = async () => {
     if (!trimmedName) {
@@ -82,6 +99,7 @@ function App() {
     setLoading(true);
     setMatches([]);
     setCurrentRide(null);
+    setMyRideId(null);
 
     try {
       const createdRide = await createRide({
@@ -90,6 +108,7 @@ function App() {
         destination,
       });
       setCurrentRide(createdRide);
+      setMyRideId(createdRide.id);
 
       const matchData = await findMatches(createdRide);
       setMatches(matchData);
@@ -140,6 +159,49 @@ function App() {
       setError(err.message || "Could not confirm.");
     } finally {
       setConfirming(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!currentRide || !trimmedName) {
+      return;
+    }
+
+    setError("");
+    setLeaving(true);
+
+    try {
+      await cancelRide(currentRide.id, trimmedName);
+      setCurrentRide(null);
+      setMyRideId(null);
+      setMatches([]);
+    } catch (err) {
+      console.error("Error cancelling ride:", err);
+      setError(err.message || "Could not cancel.");
+    } finally {
+      setLeaving(false);
+    }
+  };
+
+  const handleLeavePair = async () => {
+    if (!currentRide || !trimmedName) {
+      return;
+    }
+
+    setError("");
+    setLeaving(true);
+
+    try {
+      const restored = await leavePair(currentRide.id, trimmedName);
+      setCurrentRide(restored);
+      setMyRideId(restored.id);
+      const matchData = await findMatches(restored);
+      setMatches(matchData);
+    } catch (err) {
+      console.error("Error leaving pair:", err);
+      setError(err.message || "Could not leave pair.");
+    } finally {
+      setLeaving(false);
     }
   };
 
@@ -210,6 +272,7 @@ function App() {
           <h2>Confirm your ride</h2>
           <p className="empty">
             Pair found for {currentRide.destination}. Both people must confirm.
+            Leaving will unpair both of you.
           </p>
           <ul>
             {currentRide.members.map((member) => (
@@ -225,13 +288,20 @@ function App() {
           </ul>
           <button
             onClick={handleConfirm}
-            disabled={confirming || iConfirmed}
+            disabled={confirming || leaving || iConfirmed}
           >
             {iConfirmed
               ? "Waiting for the other person..."
               : confirming
                 ? "Confirming..."
                 : "Confirm"}
+          </button>
+          <button
+            className="secondary-button"
+            onClick={handleLeavePair}
+            disabled={leaving || confirming}
+          >
+            {leaving ? "Leaving..." : "Leave pair"}
           </button>
         </div>
       ) : null}
@@ -256,7 +326,7 @@ function App() {
                   <button
                     className="join-button"
                     onClick={() => handleJoin(match.id)}
-                    disabled={joiningId !== null}
+                    disabled={joiningId !== null || leaving}
                   >
                     {joiningId === match.id ? "Joining..." : "Join"}
                   </button>
@@ -264,6 +334,14 @@ function App() {
               ))}
             </ul>
           )}
+
+          <button
+            className="secondary-button"
+            onClick={handleCancel}
+            disabled={leaving || joiningId !== null}
+          >
+            {leaving ? "Cancelling..." : "Cancel my ride"}
+          </button>
         </div>
       ) : null}
     </div>

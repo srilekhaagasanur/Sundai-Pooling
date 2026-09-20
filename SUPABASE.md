@@ -40,3 +40,6 @@ Open the Vite URL on two phones/browsers (same Wi‑Fi or public deploy later). 
 - Confirm the Supabase project is awake (open the dashboard once).
 - Post two test rides to the same destination and complete join → confirm → locked.
 - Optional: clear old rows in **Table Editor** → `rides` between demo rounds.
+
+## Leave / cancel (existing projects)
+If you already ran an older `schema.sql`, also run `supabase/leave_cancel.sql` once so `cancel_ride` and `leave_pair` exist and `cancelled` is allowed.
