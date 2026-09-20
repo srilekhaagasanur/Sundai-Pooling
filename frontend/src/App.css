@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f4f6f8;
+}
+
+.container {
+  width: 500px;
+  margin: 80px auto;
+}
+
+h1 {
+  margin-bottom: 5px;
+}
+
+.ride-form {
+  background: white;
+  padding: 30px;
+  margin-top: 30px;
+  border-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+input {
+  padding: 12px;
+  font-size: 16px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 14px;
+
+  font-size: 16px;
+  cursor: pointer;
+
+  border: none;
+  border-radius: 6px;
+
+  background: black;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.8;
+}
