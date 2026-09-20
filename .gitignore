@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/.venv/
+.venv/
+venv/
+
+# Build
+dist/
+frontend/dist/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.local
+
+# Python
+__pycache__/
+*.pyc
+backend/__pycache__/
+
+# Logs / OS / editor
+*.log
+.DS_Store
+.idea/
+.vscode/

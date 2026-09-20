@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import {
+  confirmRide,
+  createRide,
+  findMatches,
+  getRide,
+  joinRide,
+} from "./lib/rides";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
-const API_BASE = "http://127.0.0.1:8000";
 
 const DESTINATIONS = [
   "Ashdown House - 235 Albany St",
@@ -43,22 +49,12 @@ function App() {
 
     const refresh = async () => {
       try {
-        const response = await fetch(`${API_BASE}/rides/${rideId}`);
-        if (!response.ok) {
-          return;
-        }
-
-        const ride = await response.json();
+        const ride = await getRide(rideId);
         setCurrentRide(ride);
 
         if (ride.status === "open") {
-          const matchesResponse = await fetch(
-            `${API_BASE}/rides/${ride.id}/matches`
-          );
-          if (matchesResponse.ok) {
-            const matchData = await matchesResponse.json();
-            setMatches(Array.isArray(matchData) ? matchData : []);
-          }
+          const matchData = await findMatches(ride);
+          setMatches(matchData);
         } else {
           setMatches([]);
         }
@@ -87,41 +83,22 @@ function App() {
     setMatches([]);
     setCurrentRide(null);
 
-    const ride = {
-      name: trimmedName,
-      source: FIXED_ORIGIN,
-      destination: destination,
-    };
-
     try {
-      const createResponse = await fetch(`${API_BASE}/rides`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(ride),
+      const createdRide = await createRide({
+        name: trimmedName,
+        source: FIXED_ORIGIN,
+        destination,
       });
-
-      if (!createResponse.ok) {
-        throw new Error("Could not create ride.");
-      }
-
-      const createdRide = await createResponse.json();
       setCurrentRide(createdRide);
 
-      const matchesResponse = await fetch(
-        `${API_BASE}/rides/${createdRide.id}/matches`
-      );
-
-      if (!matchesResponse.ok) {
-        throw new Error("Could not load matches.");
-      }
-
-      const matchData = await matchesResponse.json();
-      setMatches(Array.isArray(matchData) ? matchData : []);
+      const matchData = await findMatches(createdRide);
+      setMatches(matchData);
     } catch (err) {
       console.error("Error finding matches:", err);
-      setError("Something went wrong. Is the backend running?");
+      setError(
+        err.message ||
+          "Something went wrong. Check your Supabase .env keys and schema."
+      );
     } finally {
       setLoading(false);
     }
@@ -136,20 +113,7 @@ function App() {
     setJoiningId(matchId);
 
     try {
-      const response = await fetch(`${API_BASE}/rides/${matchId}/join`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ joiner_ride_id: currentRide.id }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Could not join ride.");
-      }
-
+      const data = await joinRide(matchId, currentRide.id);
       setMatches([]);
       setCurrentRide(data);
     } catch (err) {
@@ -169,23 +133,7 @@ function App() {
     setConfirming(true);
 
     try {
-      const response = await fetch(
-        `${API_BASE}/rides/${currentRide.id}/confirm`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ name: trimmedName }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Could not confirm ride.");
-      }
-
+      const data = await confirmRide(currentRide.id, trimmedName);
       setCurrentRide(data);
     } catch (err) {
       console.error("Error confirming ride:", err);
