@@ -48,6 +48,9 @@ Open the Vite URL on two phones/browsers (same Wi‑Fi or public deploy later). 
 ## 5b. User id on rides (existing projects)
 If `rides` already exists, also run `supabase/user_id.sql` once so each ride can store `user_id` and only one open ride per user is allowed.
 
+## 5c. Confirm by user id (existing projects)
+Run `supabase/confirm_by_user.sql` once so join/confirm/leave match on `user_id` inside `members` (fixes same-display-name double confirm).
+
 ## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
 - Clear old `rides` rows between rounds if the board gets noisy.

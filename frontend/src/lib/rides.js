@@ -15,7 +15,7 @@ export async function createRide({ userId, name, source, destination }) {
       source,
       destination,
       status: "open",
-      members: [{ name, confirmed: false }],
+      members: [{ name, user_id: userId, confirmed: false }],
     })
     .select()
     .single();
@@ -84,7 +84,7 @@ export async function upsertOpenRide({ userId, name, source, destination }) {
   await Promise.all(
     extras.map(async (ride) => {
       try {
-        await cancelRide(ride.id, name);
+        await cancelRide(ride.id, userId);
       } catch (err) {
         console.error("Error cancelling duplicate open ride:", err);
       }
@@ -206,10 +206,10 @@ export async function joinRide(targetId, joinerRideId) {
   return data;
 }
 
-export async function confirmRide(rideId, riderName) {
+export async function confirmRide(rideId, riderUserId) {
   const { data, error } = await supabase.rpc("confirm_ride", {
     ride_id: rideId,
-    rider_name: riderName,
+    rider_user_id: riderUserId,
   });
 
   if (error) {
@@ -219,10 +219,10 @@ export async function confirmRide(rideId, riderName) {
   return data;
 }
 
-export async function cancelRide(rideId, riderName) {
+export async function cancelRide(rideId, riderUserId) {
   const { data, error } = await supabase.rpc("cancel_ride", {
     ride_id: rideId,
-    rider_name: riderName,
+    rider_user_id: riderUserId,
   });
 
   if (error) {
@@ -232,10 +232,10 @@ export async function cancelRide(rideId, riderName) {
   return data;
 }
 
-export async function leavePair(pairRideId, riderName) {
+export async function leavePair(pairRideId, riderUserId) {
   const { data, error } = await supabase.rpc("leave_pair", {
     pair_ride_id: pairRideId,
-    rider_name: riderName,
+    rider_user_id: riderUserId,
   });
 
   if (error) {

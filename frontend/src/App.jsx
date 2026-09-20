@@ -80,7 +80,7 @@ function App() {
   const destinationDirty =
     hasOpenRide && destination && destination !== currentRide.destination;
   const myMember = currentRide?.members?.find(
-    (member) => member.name === trimmedName
+    (member) => user?.id && member.user_id === user.id
   );
   const iConfirmed = Boolean(myMember?.confirmed);
 
@@ -176,7 +176,7 @@ function App() {
       try {
         let ride = await getRide(rideId);
         const stillMember = (ride.members || []).some(
-          (member) => member.name === trimmedName
+          (member) => user?.id && member.user_id === user.id
         );
 
         // Other person left the pair — switch back to your own open ride.
@@ -208,7 +208,7 @@ function App() {
 
     const intervalId = setInterval(refresh, 2000);
     return () => clearInterval(intervalId);
-  }, [currentRide?.id, currentRide?.status, myRideId, trimmedName]);
+  }, [currentRide?.id, currentRide?.status, myRideId, trimmedName, user?.id]);
 
   const handleSignIn = async () => {
     setError("");
@@ -308,7 +308,7 @@ function App() {
   };
 
   const handleConfirm = async () => {
-    if (!currentRide || !trimmedName) {
+    if (!currentRide || !user?.id) {
       return;
     }
 
@@ -316,7 +316,7 @@ function App() {
     setConfirming(true);
 
     try {
-      const data = await confirmRide(currentRide.id, trimmedName);
+      const data = await confirmRide(currentRide.id, user.id);
       setCurrentRide(data);
     } catch (err) {
       console.error("Error confirming ride:", err);
@@ -327,7 +327,7 @@ function App() {
   };
 
   const handleCancel = async () => {
-    if (!currentRide || !trimmedName) {
+    if (!currentRide || !user?.id) {
       return;
     }
 
@@ -335,7 +335,7 @@ function App() {
     setLeaving(true);
 
     try {
-      await cancelRide(currentRide.id, trimmedName);
+      await cancelRide(currentRide.id, user.id);
       setCurrentRide(null);
       setMyRideId(null);
       setMatches([]);
@@ -348,7 +348,7 @@ function App() {
   };
 
   const handleLeavePair = async () => {
-    if (!currentRide || !trimmedName) {
+    if (!currentRide || !user?.id) {
       return;
     }
 
@@ -356,7 +356,7 @@ function App() {
     setLeaving(true);
 
     try {
-      const restored = await leavePair(currentRide.id, trimmedName);
+      const restored = await leavePair(currentRide.id, user.id);
       setCurrentRide(restored);
       setMyRideId(restored.id);
       const matchData = await findMatches(restored);
@@ -378,8 +378,9 @@ function App() {
   };
 
   const partnerName =
-    currentRide?.members?.find((member) => member.name !== trimmedName)
-      ?.name || "your pair";
+    currentRide?.members?.find(
+      (member) => user?.id && member.user_id && member.user_id !== user.id
+    )?.name || "your pair";
 
   if (!authReady) {
     return (
@@ -491,7 +492,10 @@ function App() {
 
           <ul className="card-list">
             {currentRide.members.map((member) => (
-              <li key={member.name} className="person-card">
+              <li
+                key={member.user_id || member.name}
+                className="person-card"
+              >
                 <div className="person-card__body">
                   <strong className="person-card__name">{member.name}</strong>
                   <span className="person-card__meta">Ready to go</span>
@@ -523,7 +527,10 @@ function App() {
           </p>
           <ul className="card-list">
             {currentRide.members.map((member) => (
-              <li key={member.name} className="person-card">
+              <li
+                key={member.user_id || member.name}
+                className="person-card"
+              >
                 <div className="person-card__body">
                   <strong className="person-card__name">{member.name}</strong>
                   <span className="person-card__meta">
