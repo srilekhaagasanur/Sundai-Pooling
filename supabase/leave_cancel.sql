@@ -27,7 +27,11 @@ begin
     raise exception 'Only open rides can be cancelled';
   end if;
 
-  if ride.name <> rider_name then
+  if ride.user_id is not null then
+    if auth.uid() is null or ride.user_id <> auth.uid() then
+      raise exception 'You can only cancel your own ride';
+    end if;
+  elsif ride.name <> rider_name then
     raise exception 'You can only cancel your own ride';
   end if;
 

@@ -9,11 +9,19 @@ create table if not exists public.rides (
     check (status in ('open', 'pending', 'joined', 'locked', 'cancelled')),
   members jsonb not null default '[]'::jsonb,
   joined_ride_id bigint references public.rides(id),
+  user_id uuid references auth.users (id),
   created_at timestamptz not null default now()
 );
 
 create index if not exists rides_status_destination_idx
   on public.rides (status, destination);
+
+create index if not exists rides_user_id_idx
+  on public.rides (user_id);
+
+create unique index if not exists rides_one_open_per_user_idx
+  on public.rides (user_id)
+  where status = 'open' and user_id is not null;
 
 alter table public.rides enable row level security;
 
@@ -183,7 +191,11 @@ begin
     raise exception 'Only open rides can be cancelled';
   end if;
 
-  if ride.name <> rider_name then
+  if ride.user_id is not null then
+    if auth.uid() is null or ride.user_id <> auth.uid() then
+      raise exception 'You can only cancel your own ride';
+    end if;
+  elsif ride.name <> rider_name then
     raise exception 'You can only cancel your own ride';
   end if;
 

@@ -6,10 +6,11 @@ function rpcErrorMessage(error) {
   return error?.message || "Something went wrong with Supabase.";
 }
 
-export async function createRide({ name, source, destination }) {
+export async function createRide({ userId, name, source, destination }) {
   const { data, error } = await supabase
     .from("rides")
     .insert({
+      user_id: userId,
       name,
       source,
       destination,
@@ -40,12 +41,12 @@ export async function getRide(rideId) {
   return data;
 }
 
-export async function findOpenRidesByName(name) {
+export async function findOpenRidesByUserId(userId) {
   const { data, error } = await supabase
     .from("rides")
     .select("*")
     .eq("status", "open")
-    .eq("name", name)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -71,13 +72,13 @@ export async function updateOpenRideDestination(rideId, destination) {
   return data;
 }
 
-/**
- * Keep a single open ride per display name: reuse/update the newest open row,
- * cancel any older open duplicates, or create if none exist.
- * (Temporary until user_id lands in the schema.)
- */
-export async function upsertOpenRide({ name, source, destination }) {
-  const openRides = await findOpenRidesByName(name);
+/** Keep a single open ride per Google user; update destination in place. */
+export async function upsertOpenRide({ userId, name, source, destination }) {
+  if (!userId) {
+    throw new Error("Sign in required to post a ride.");
+  }
+
+  const openRides = await findOpenRidesByUserId(userId);
   const [keep, ...extras] = openRides;
 
   await Promise.all(
@@ -97,50 +98,41 @@ export async function upsertOpenRide({ name, source, destination }) {
     return updateOpenRideDestination(keep.id, destination);
   }
 
-  return createRide({ name, source, destination });
+  return createRide({ userId, name, source, destination });
 }
 
-/** Resume open/pending/joined state for this rider after refresh. */
-export async function findActiveRideForRider(name) {
-  const openRides = await findOpenRidesByName(name);
+/** Resume open/pending/joined state for this signed-in user after refresh. */
+export async function findActiveRideForRider({ userId, name }) {
+  if (!userId) {
+    return null;
+  }
+
+  const openRides = await findOpenRidesByUserId(userId);
   if (openRides[0]) {
     return { ride: openRides[0], myRideId: openRides[0].id };
   }
 
-  const { data: pendingRows, error: pendingError } = await supabase
+  const { data: pendingOwned, error: pendingOwnedError } = await supabase
     .from("rides")
     .select("*")
     .eq("status", "pending")
-    .order("created_at", { ascending: false });
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
 
-  if (pendingError) {
-    throw new Error(rpcErrorMessage(pendingError));
+  if (pendingOwnedError) {
+    throw new Error(rpcErrorMessage(pendingOwnedError));
   }
 
-  const pending = (pendingRows || []).find((ride) =>
-    (ride.members || []).some((member) => member.name === name)
-  );
-  if (pending) {
-    const mine = pending.name === name ? pending.id : null;
-    const { data: joinedRow } = await supabase
-      .from("rides")
-      .select("id")
-      .eq("status", "joined")
-      .eq("name", name)
-      .eq("joined_ride_id", pending.id)
-      .maybeSingle();
-
-    return {
-      ride: pending,
-      myRideId: mine || joinedRow?.id || pending.id,
-    };
+  if (pendingOwned?.[0]) {
+    return { ride: pendingOwned[0], myRideId: pendingOwned[0].id };
   }
 
   const { data: joinedRows, error: joinedError } = await supabase
     .from("rides")
     .select("*")
     .eq("status", "joined")
-    .eq("name", name)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1);
 
@@ -154,17 +146,43 @@ export async function findActiveRideForRider(name) {
     return { ride: pair, myRideId: joined.id };
   }
 
+  // Legacy fallback: rows created before user_id existed
+  if (name) {
+    const { data: legacyOpen, error: legacyError } = await supabase
+      .from("rides")
+      .select("*")
+      .eq("status", "open")
+      .eq("name", name)
+      .is("user_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (legacyError) {
+      throw new Error(rpcErrorMessage(legacyError));
+    }
+
+    if (legacyOpen?.[0]) {
+      return { ride: legacyOpen[0], myRideId: legacyOpen[0].id };
+    }
+  }
+
   return null;
 }
 
 export async function findMatches(ride) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("rides")
     .select("*")
     .eq("status", "open")
     .eq("destination", ride.destination)
     .neq("id", ride.id)
     .order("created_at", { ascending: true });
+
+  if (ride.user_id) {
+    query = query.neq("user_id", ride.user_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(rpcErrorMessage(error));

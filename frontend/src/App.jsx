@@ -130,7 +130,7 @@ function App() {
     let active = true;
     setRestoring(true);
 
-    findActiveRideForRider(trimmedName)
+    findActiveRideForRider({ userId: user.id, name: trimmedName })
       .then(async (activeRide) => {
         if (!active || !activeRide) {
           return;
@@ -265,6 +265,7 @@ function App() {
 
     try {
       const ride = await upsertOpenRide({
+        userId: user.id,
         name: trimmedName,
         source: FIXED_ORIGIN,
         destination,

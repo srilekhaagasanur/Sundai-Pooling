@@ -45,6 +45,9 @@ Open the Vite URL on two phones/browsers (same Wi‑Fi or public deploy later). 
    - `https://sundai-pooling.vercel.app`
 4. App shows **Sign in with Google** before posting/joining.
 
+## 5b. User id on rides (existing projects)
+If `rides` already exists, also run `supabase/user_id.sql` once so each ride can store `user_id` and only one open ride per user is allowed.
+
 ## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
 - Clear old `rides` rows between rounds if the board gets noisy.
