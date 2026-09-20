@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { defaultMatchScorer, rankMatches } from "./matching";
+import { rankMatches, rankMatchesHybrid } from "./matching";
 
 const MAX_RIDERS = 2;
 
@@ -361,12 +361,15 @@ export async function listOpenCandidates(ride) {
 }
 
 /**
- * Rank nearby / same-place open rides for this rider.
- * Pass a different scorer later for road-distance ranking.
+ * Rank nearby open rides: haversine shortlist, then ORS road matrix when available.
+ * Pass scorer only to force pure haversine (tests / offline).
  */
-export async function findMatches(ride, scorer = defaultMatchScorer) {
+export async function findMatches(ride, scorer = null) {
   const candidates = await listOpenCandidates(ride);
-  return rankMatches(ride, candidates, scorer);
+  if (scorer) {
+    return rankMatches(ride, candidates, scorer);
+  }
+  return rankMatchesHybrid(ride, candidates);
 }
 
 export async function joinRide(targetId, joinerRideId) {

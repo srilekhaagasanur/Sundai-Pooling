@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import {
-  buildUberLookingLink,
-  IHQ_PICKUP,
-  orderDropoffs,
-  shortStopLabel,
-  stopsFromLockedRide,
+  buildUberStopPlan,
 } from "./lib/uber";
 import DestinationAutocomplete from "./components/DestinationAutocomplete";
 import {
@@ -96,6 +92,8 @@ function App() {
   const [confirming, setConfirming] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState("");
+  const [uberStopPlan, setUberStopPlan] = useState(null);
+  const [uberPlanLoading, setUberPlanLoading] = useState(false);
 
   const user = session?.user ?? null;
   const trimmedName = displayNameFromUser(user);
@@ -444,40 +442,38 @@ function App() {
   const memberLabel = (member) =>
     user?.id && member.user_id === user.id ? "You" : member.name;
 
-  const uberStopPlan = (() => {
+  useEffect(() => {
     if (status !== "locked" || !currentRide) {
-      return null;
+      setUberStopPlan(null);
+      setUberPlanLoading(false);
+      return undefined;
     }
-    const stops = stopsFromLockedRide(currentRide);
-    if (stops.length === 0) {
-      return null;
-    }
-    if (stops.length === 1) {
-      const link = buildUberLookingLink({ drops: stops });
-      return {
-        sameStop: true,
-        recommendedLabel: shortStopLabel(stops[0]),
-        recommendedLink: link,
-        reverseLink: null,
-        reverseLabel: null,
-      };
-    }
-    const ordered = orderDropoffs(IHQ_PICKUP, stops[0], stops[1]);
-    if (!ordered) {
-      return null;
-    }
-    return {
-      sameStop: ordered.sameStop,
-      recommendedLabel: ordered.recommended
-        .map(shortStopLabel)
-        .join(" → "),
-      reverseLabel: ordered.reverse.map(shortStopLabel).join(" → "),
-      recommendedLink: buildUberLookingLink({ drops: ordered.recommended }),
-      reverseLink: ordered.sameStop
-        ? null
-        : buildUberLookingLink({ drops: ordered.reverse }),
+
+    let active = true;
+    setUberPlanLoading(true);
+
+    buildUberStopPlan(currentRide)
+      .then((plan) => {
+        if (active) {
+          setUberStopPlan(plan);
+        }
+      })
+      .catch((err) => {
+        console.error("Error building Uber plan:", err);
+        if (active) {
+          setUberStopPlan(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setUberPlanLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
     };
-  })();
+  }, [status, currentRide]);
 
   if (!authReady) {
     return (
@@ -630,6 +626,14 @@ function App() {
 
           <p className="locked-win__note">Both confirmed — you&apos;re set.</p>
 
+          {uberPlanLoading ? (
+            <p className="form-hint">Checking road distances…</p>
+          ) : null}
+
+          {uberStopPlan?.detourLine ? (
+            <p className="locked-win__detour">{uberStopPlan.detourLine}</p>
+          ) : null}
+
           {uberStopPlan?.recommendedLink ? (
             <div className="uber-actions">
               <a
@@ -646,8 +650,9 @@ function App() {
               {uberStopPlan.reverseLink ? (
                 <>
                   <p className="form-hint">
-                    Suggested order is by straight-line distance — Uber&apos;s
-                    road route may differ.
+                    {uberStopPlan.method === "ors"
+                      ? "Suggested order uses OpenStreetMap road distance — Uber may still tweak the route."
+                      : "Suggested order is by straight-line distance — Uber's road route may differ."}
                   </p>
                   <a
                     className="secondary-button uber-button--alt"
@@ -660,12 +665,12 @@ function App() {
                 </>
               ) : null}
             </div>
-          ) : (
+          ) : !uberPlanLoading ? (
             <p className="form-hint">
               Uber link needs destination coordinates — re-pair with Places
               picks if this is missing.
             </p>
-          )}
+          ) : null}
 
           <button className="secondary-button" onClick={handleStartOver}>
             Start over

@@ -5,3 +5,4 @@ export {
   NEARBY_RADIUS_METERS,
 } from "./scorers";
 export { rankMatches } from "./rankMatches";
+export { rankMatchesHybrid } from "./roadRank";

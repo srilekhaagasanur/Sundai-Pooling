@@ -55,6 +55,11 @@ Run `supabase/confirm_by_user.sql` once so join/confirm/leave match on `user_id`
 Run `supabase/places_dest.sql` once for `place_id` / `dest_lat` / `dest_lng`.  
 Add `VITE_GOOGLE_MAPS_API_KEY` to `frontend/.env` and Vercel (public browser key with HTTP referrer restrictions).
 
+## 5h. OpenRouteService road distance (optional)
+Add `VITE_OPENROUTESERVICE_API_KEY` to `frontend/.env` and Vercel.
+Nearby matches still use haversine (~1.5 km) as a shortlist, then ORS matrix re-ranks by road distance.
+Locked Uber stop order + savings line use ORS directions (falls back to haversine if the key is missing or the call fails).
+
 ## 5e. Nearby join (existing projects)
 Run `supabase/nearby_join.sql` once so `join_ride` allows destinations within ~1.5 km (not only exact address match).
 

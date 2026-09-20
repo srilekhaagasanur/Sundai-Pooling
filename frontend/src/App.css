@@ -470,6 +470,13 @@ button:disabled {
   font-weight: 600;
 }
 
+.locked-win__detour {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #344054;
+}
+
 .uber-actions {
   display: flex;
   flex-direction: column;
