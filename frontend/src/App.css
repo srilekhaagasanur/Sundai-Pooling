@@ -102,7 +102,32 @@ button:disabled {
   border-radius: 8px;
 }
 
+.matches li.match-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.matches li.match-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .matches li span {
   color: #555;
   font-size: 14px;
+}
+
+.join-button {
+  margin-top: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.paired {
+  border: 2px solid #111;
 }

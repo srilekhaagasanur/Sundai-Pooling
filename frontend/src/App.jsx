@@ -17,7 +17,9 @@ function App() {
   const [destination, setDestination] = useState("");
   const [currentRide, setCurrentRide] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [pairedRide, setPairedRide] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [joiningId, setJoiningId] = useState(null);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
@@ -35,6 +37,7 @@ function App() {
     setLoading(true);
     setMatches([]);
     setCurrentRide(null);
+    setPairedRide(null);
 
     const ride = {
       name: name.trim(),
@@ -76,6 +79,40 @@ function App() {
     }
   };
 
+  const handleJoin = async (matchId) => {
+    if (!currentRide) {
+      return;
+    }
+
+    setError("");
+    setJoiningId(matchId);
+
+    try {
+      const response = await fetch(`${API_BASE}/rides/${matchId}/join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ joiner_ride_id: currentRide.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not join ride.");
+      }
+
+      setPairedRide(data);
+      setMatches([]);
+      setCurrentRide(data);
+    } catch (err) {
+      console.error("Error joining ride:", err);
+      setError(err.message || "Could not join that ride.");
+    } finally {
+      setJoiningId(null);
+    }
+  };
+
   return (
     <div className="container">
       <h1>RideMatch 🚗</h1>
@@ -90,6 +127,7 @@ function App() {
           placeholder="Enter your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          disabled={Boolean(pairedRide)}
         />
 
         <label>From</label>
@@ -101,6 +139,7 @@ function App() {
         <select
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
+          disabled={Boolean(pairedRide)}
         >
           <option value="" disabled>
             Select a destination
@@ -112,14 +151,34 @@ function App() {
           ))}
         </select>
 
-        <button onClick={handleSubmit} disabled={loading}>
+        <button
+          onClick={handleSubmit}
+          disabled={loading || Boolean(pairedRide)}
+        >
           {loading ? "Finding matches..." : "Find Ride Matches"}
         </button>
 
         {error ? <p className="error">{error}</p> : null}
       </div>
 
-      {currentRide ? (
+      {pairedRide ? (
+        <div className="matches paired">
+          <h2>You&apos;re paired!</h2>
+          <p className="empty">
+            Going together to {pairedRide.destination} (2 people max).
+          </p>
+          <ul>
+            {pairedRide.members.map((member) => (
+              <li key={member}>
+                <strong>{member}</strong>
+                <span>{pairedRide.destination}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {!pairedRide && currentRide ? (
         <div className="matches">
           <h2>Matches for {currentRide.destination}</h2>
 
@@ -131,9 +190,18 @@ function App() {
           ) : (
             <ul>
               {matches.map((match) => (
-                <li key={match.id}>
-                  <strong>{match.name}</strong>
-                  <span>{match.destination}</span>
+                <li key={match.id} className="match-row">
+                  <div>
+                    <strong>{match.name}</strong>
+                    <span>{match.destination}</span>
+                  </div>
+                  <button
+                    className="join-button"
+                    onClick={() => handleJoin(match.id)}
+                    disabled={joiningId !== null}
+                  >
+                    {joiningId === match.id ? "Joining..." : "Join"}
+                  </button>
                 </li>
               ))}
             </ul>
