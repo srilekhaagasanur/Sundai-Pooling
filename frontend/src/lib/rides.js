@@ -186,6 +186,10 @@ export async function findActiveRideForRider({ userId, name }) {
   const joined = joinedRows?.[0];
   if (joined?.joined_ride_id) {
     const pair = await getRide(joined.joined_ride_id);
+    // Locked/cancelled trips are finished — don't pull them back after Start over.
+    if (pair.status === "locked" || pair.status === "cancelled") {
+      return null;
+    }
     return { ride: pair, myRideId: joined.id };
   }
 
@@ -210,6 +214,27 @@ export async function findActiveRideForRider({ userId, name }) {
   }
 
   return null;
+}
+
+/** Mark a finished locked trip so it won't resurrect; cancels the caller's joined row if any. */
+export async function dismissFinishedRide({ userId, ride, myRideId }) {
+  if (!userId || !ride) {
+    return;
+  }
+
+  // Joiner still has a `joined` row pointing at the locked pair — close it out.
+  if (myRideId && myRideId !== ride.id) {
+    const { error } = await supabase
+      .from("rides")
+      .update({ status: "cancelled" })
+      .eq("id", myRideId)
+      .eq("user_id", userId)
+      .eq("status", "joined");
+
+    if (error) {
+      console.error("Error dismissing joined ride:", error);
+    }
+  }
 }
 
 export async function findMatches(ride) {

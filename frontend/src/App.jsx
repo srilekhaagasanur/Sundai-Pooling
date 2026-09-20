@@ -16,6 +16,7 @@ import {
   getRide,
   joinRide,
   leavePair,
+  dismissFinishedRide,
   upsertOpenRide,
 } from "./lib/rides";
 
@@ -165,7 +166,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [user, trimmedName]);
+  }, [user?.id, trimmedName]);
 
   useEffect(() => {
     if (!currentRide?.id) {
@@ -384,7 +385,19 @@ function App() {
     }
   };
 
-  const handleStartOver = () => {
+  const handleStartOver = async () => {
+    try {
+      if (status === "locked" && user?.id) {
+        await dismissFinishedRide({
+          userId: user.id,
+          ride: currentRide,
+          myRideId,
+        });
+      }
+    } catch (err) {
+      console.error("Error dismissing finished ride:", err);
+    }
+
     setCurrentRide(null);
     setMyRideId(null);
     setMatches([]);
