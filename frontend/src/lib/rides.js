@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { defaultMatchScorer, rankMatches } from "./matching";
 
 const MAX_RIDERS = 2;
 
@@ -105,6 +106,54 @@ export async function upsertOpenRide({
     throw new Error("Sign in required to post a ride.");
   }
 
+  const payload = {
+    userId,
+    name,
+    source,
+    destination,
+    placeId,
+    destLat,
+    destLng,
+  };
+
+  // Prefer atomic RPC when available; fall back if schema cache hasn't picked it up.
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    "upsert_open_ride",
+    {
+      p_user_id: userId,
+      p_name: name,
+      p_source: source,
+      p_destination: destination,
+      p_place_id: placeId,
+      p_dest_lat: destLat,
+      p_dest_lng: destLng,
+    }
+  );
+
+  if (!rpcError) {
+    return rpcData;
+  }
+
+  const missingRpc =
+    /could not find the function/i.test(rpcError.message || "") ||
+    rpcError.code === "PGRST202";
+
+  if (!missingRpc) {
+    throw new Error(rpcErrorMessage(rpcError));
+  }
+
+  return upsertOpenRideClient(payload);
+}
+
+async function upsertOpenRideClient({
+  userId,
+  name,
+  source,
+  destination,
+  placeId,
+  destLat,
+  destLng,
+}) {
   const openRides = await findOpenRidesByUserId(userId);
   const [keep, ...extras] = openRides;
 
@@ -119,12 +168,6 @@ export async function upsertOpenRide({
   );
 
   if (keep) {
-    const samePlace =
-      (placeId && keep.place_id === placeId) ||
-      (!placeId && keep.destination === destination);
-    if (samePlace) {
-      return keep;
-    }
     return updateOpenRideDestination(keep.id, {
       destination,
       placeId,
@@ -133,15 +176,34 @@ export async function upsertOpenRide({
     });
   }
 
-  return createRide({
-    userId,
-    name,
-    source,
-    destination,
-    placeId,
-    destLat,
-    destLng,
-  });
+  try {
+    return await createRide({
+      userId,
+      name,
+      source,
+      destination,
+      placeId,
+      destLat,
+      destLng,
+    });
+  } catch (err) {
+    const msg = err?.message || "";
+    if (!/rides_one_open_per_user|duplicate key/i.test(msg)) {
+      throw err;
+    }
+
+    // Race: another tab/request created the open row first — update it.
+    const again = await findOpenRidesByUserId(userId);
+    if (!again[0]) {
+      throw err;
+    }
+    return updateOpenRideDestination(again[0].id, {
+      destination,
+      placeId,
+      destLat,
+      destLng,
+    });
+  }
 }
 
 /** Resume open/pending/joined state for this signed-in user after refresh. */
@@ -237,7 +299,8 @@ export async function dismissFinishedRide({ userId, ride, myRideId }) {
   }
 }
 
-export async function findMatches(ride) {
+/** Open rides that could be joined (no ranking). */
+export async function listOpenCandidates(ride) {
   let query = supabase
     .from("rides")
     .select("*")
@@ -249,12 +312,6 @@ export async function findMatches(ride) {
     query = query.neq("user_id", ride.user_id);
   }
 
-  if (ride.place_id) {
-    query = query.eq("place_id", ride.place_id);
-  } else {
-    query = query.eq("destination", ride.destination);
-  }
-
   const { data, error } = await query;
 
   if (error) {
@@ -264,6 +321,15 @@ export async function findMatches(ride) {
   return (data || []).filter(
     (match) => Array.isArray(match.members) && match.members.length < MAX_RIDERS
   );
+}
+
+/**
+ * Rank nearby / same-place open rides for this rider.
+ * Pass a different scorer later for road-distance ranking.
+ */
+export async function findMatches(ride, scorer = defaultMatchScorer) {
+  const candidates = await listOpenCandidates(ride);
+  return rankMatches(ride, candidates, scorer);
 }
 
 export async function joinRide(targetId, joinerRideId) {

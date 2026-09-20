@@ -55,6 +55,12 @@ Run `supabase/confirm_by_user.sql` once so join/confirm/leave match on `user_id`
 Run `supabase/places_dest.sql` once for `place_id` / `dest_lat` / `dest_lng`.  
 Add `VITE_GOOGLE_MAPS_API_KEY` to `frontend/.env` and Vercel (public browser key with HTTP referrer restrictions).
 
+## 5e. Nearby join (existing projects)
+Run `supabase/nearby_join.sql` once so `join_ride` allows destinations within ~1.5 km (not only exact address match).
+
+## 5f. Atomic open-ride upsert (existing projects)
+Run `supabase/upsert_open_ride.sql` once so posting/updating never hits `rides_one_open_per_user_idx` races.
+
 ## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
 - Clear old `rides` rows between rounds if the board gets noisy.

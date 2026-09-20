@@ -358,6 +358,12 @@ button:disabled {
   white-space: nowrap;
 }
 
+.person-card__distance {
+  color: #0a7a32;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .person-card__badge {
   flex-shrink: 0;
   font-size: 12px;

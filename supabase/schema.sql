@@ -65,6 +65,33 @@ end $$;
 drop function if exists public.confirm_ride(bigint, text);
 drop function if exists public.leave_pair(bigint, text);
 
+-- Allow joining nearby destinations (not only exact address strings).
+-- Run in Supabase SQL Editor once.
+
+create or replace function public.dest_distance_m(
+  lat1 double precision,
+  lng1 double precision,
+  lat2 double precision,
+  lng2 double precision
+)
+returns double precision
+language sql
+immutable
+as $$
+  select case
+    when lat1 is null or lng1 is null or lat2 is null or lng2 is null then null
+    else (
+      2 * 6371000 * asin(
+        sqrt(
+          power(sin(radians(lat2 - lat1) / 2), 2) +
+          cos(radians(lat1)) * cos(radians(lat2)) *
+          power(sin(radians(lng2 - lng1) / 2), 2)
+        )
+      )
+    )
+  end;
+$$;
+
 create or replace function public.join_ride(
   target_id bigint,
   joiner_id bigint
@@ -77,6 +104,8 @@ as $$
 declare
   target public.rides;
   joiner public.rides;
+  nearby_ok boolean := false;
+  dist_m double precision;
 begin
   if target_id = joiner_id then
     raise exception 'Cannot join your own ride';
@@ -104,15 +133,30 @@ begin
     raise exception 'Ride is no longer available';
   end if;
 
-  if target.destination <> joiner.destination then
-    raise exception 'Destinations do not match';
-  end if;
-
   if jsonb_array_length(target.members) >= 2 then
     raise exception 'Ride is full';
   end if;
 
-  -- Ensure poster member has user_id (repair older open rows)
+  if target.place_id is not null
+     and joiner.place_id is not null
+     and target.place_id = joiner.place_id then
+    nearby_ok := true;
+  elsif target.destination = joiner.destination then
+    nearby_ok := true;
+  else
+    dist_m := public.dest_distance_m(
+      target.dest_lat, target.dest_lng,
+      joiner.dest_lat, joiner.dest_lng
+    );
+    if dist_m is not null and dist_m <= 1500 then
+      nearby_ok := true;
+    end if;
+  end if;
+
+  if not nearby_ok then
+    raise exception 'Destinations are too far apart to pair';
+  end if;
+
   if coalesce(target.members->0->>'user_id', '') = '' then
     target.members := jsonb_build_array(
       jsonb_build_object(

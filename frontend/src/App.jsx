@@ -634,7 +634,7 @@ function App() {
       {status === "open" && currentRide ? (
         <div className="matches">
           <div className="panel-header">
-            <h2>Matches for {currentRide.destination}</h2>
+            <h2>Nearby matches</h2>
             <StatusChip status="open" matchCount={matches.length} />
           </div>
 
@@ -644,8 +644,8 @@ function App() {
               <div>
                 <p className="waiting-state__title">You&apos;re on the board</p>
                 <p className="waiting-state__copy">
-                  Waiting for someone going to {currentRide.destination}. This
-                  screen updates when they show up.
+                  Waiting for someone headed near {currentRide.destination}.
+                  We&apos;ll show people within about a mile of your dropoff.
                 </p>
               </div>
             </div>
@@ -658,6 +658,11 @@ function App() {
                     <span className="person-card__meta">
                       {match.destination}
                     </span>
+                    {match.matchLabel ? (
+                      <span className="person-card__distance">
+                        {match.matchLabel}
+                      </span>
+                    ) : null}
                   </div>
                   <button
                     className="join-button"
