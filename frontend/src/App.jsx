@@ -10,11 +10,12 @@ import {
 import {
   cancelRide,
   confirmRide,
-  createRide,
+  findActiveRideForRider,
   findMatches,
   getRide,
   joinRide,
   leavePair,
+  upsertOpenRide,
 } from "./lib/rides";
 
 const FIXED_ORIGIN = "292 Main St, Cambridge, MA 02142";
@@ -60,6 +61,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [destination, setDestination] = useState("");
   const [currentRide, setCurrentRide] = useState(null);
   const [myRideId, setMyRideId] = useState(null);
@@ -74,6 +76,9 @@ function App() {
   const trimmedName = displayNameFromUser(user);
   const status = currentRide?.status;
   const isPaired = status === "pending" || status === "locked";
+  const hasOpenRide = status === "open" && Boolean(currentRide);
+  const destinationDirty =
+    hasOpenRide && destination && destination !== currentRide.destination;
   const myMember = currentRide?.members?.find(
     (member) => member.name === trimmedName
   );
@@ -113,8 +118,48 @@ function App() {
       setCurrentRide(null);
       setMyRideId(null);
       setMatches([]);
+      setDestination("");
+      setRestoring(false);
+      return;
     }
-  }, [user]);
+
+    if (!trimmedName) {
+      return;
+    }
+
+    let active = true;
+    setRestoring(true);
+
+    findActiveRideForRider(trimmedName)
+      .then(async (activeRide) => {
+        if (!active || !activeRide) {
+          return;
+        }
+
+        setCurrentRide(activeRide.ride);
+        setMyRideId(activeRide.myRideId);
+        setDestination(activeRide.ride.destination || "");
+
+        if (activeRide.ride.status === "open") {
+          const matchData = await findMatches(activeRide.ride);
+          if (active) {
+            setMatches(matchData);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Error restoring ride:", err);
+      })
+      .finally(() => {
+        if (active) {
+          setRestoring(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, trimmedName]);
 
   useEffect(() => {
     if (!currentRide?.id) {
@@ -140,6 +185,11 @@ function App() {
         }
 
         setCurrentRide(ride);
+        if (ride.status === "open" || ride.status === "pending") {
+          setDestination((prev) =>
+            prev && prev !== ride.destination ? prev : ride.destination
+          );
+        }
 
         if (ride.status === "open") {
           const matchData = await findMatches(ride);
@@ -205,25 +255,28 @@ function App() {
       return;
     }
 
+    if (isPaired) {
+      setError("Leave the pair before changing your destination.");
+      return;
+    }
+
     setError("");
     setLoading(true);
-    setMatches([]);
-    setCurrentRide(null);
-    setMyRideId(null);
 
     try {
-      const createdRide = await createRide({
+      const ride = await upsertOpenRide({
         name: trimmedName,
         source: FIXED_ORIGIN,
         destination,
       });
-      setCurrentRide(createdRide);
-      setMyRideId(createdRide.id);
+      setCurrentRide(ride);
+      setMyRideId(ride.id);
+      setDestination(ride.destination);
 
-      const matchData = await findMatches(createdRide);
+      const matchData = await findMatches(ride);
       setMatches(matchData);
     } catch (err) {
-      console.error("Error finding matches:", err);
+      console.error("Error saving ride:", err);
       setError(
         err.message ||
           "Something went wrong. Check your Supabase .env keys and schema."
@@ -395,9 +448,27 @@ function App() {
           ))}
         </select>
 
-        <button onClick={handleSubmit} disabled={loading || isPaired}>
-          {loading ? "Finding matches..." : "Find Ride Matches"}
+        <button
+          onClick={handleSubmit}
+          disabled={loading || isPaired || restoring || !destination}
+        >
+          {loading
+            ? hasOpenRide
+              ? "Updating..."
+              : "Finding matches..."
+            : destinationDirty
+              ? "Update destination"
+              : hasOpenRide
+                ? "Refresh matches"
+                : "Find Ride Matches"}
         </button>
+
+        {hasOpenRide && !destinationDirty ? (
+          <p className="form-hint">
+            Change destination above to edit your open ride — we won&apos;t
+            create a duplicate.
+          </p>
+        ) : null}
 
         {error ? <p className="error">{error}</p> : null}
       </div>

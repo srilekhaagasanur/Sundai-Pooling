@@ -72,6 +72,13 @@ h1 {
   font-size: 15px;
 }
 
+.form-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #667085;
+  line-height: 1.4;
+}
+
 .ride-form {
   background: white;
   padding: 30px;
