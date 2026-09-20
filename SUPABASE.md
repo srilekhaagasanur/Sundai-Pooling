@@ -36,8 +36,19 @@ npm run dev
 
 Open the Vite URL on two phones/browsers (same Wi‑Fi or public deploy later). You no longer need the FastAPI backend for the demo flow.
 
-## 5. Before the demo
+## 5. Google Auth (Sign in with Google)
+1. Google Cloud → OAuth client (Web) with redirect URI  
+   `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
+2. Supabase → **Authentication → Providers → Google** → paste Client ID/secret.
+3. Supabase → **Authentication → URL Configuration** → add:
+   - `http://localhost:5173`
+   - `https://sundai-pooling.vercel.app`
+4. App shows **Sign in with Google** before posting/joining.
+
+## 6. Before the demo
 - Confirm the Supabase project is awake (open the dashboard once).
+- Clear old `rides` rows between rounds if the board gets noisy.
+- Prefer distinct Google accounts on two phones for a dry run.
 - Post two test rides to the same destination and complete join → confirm → locked.
 - Optional: clear old rows in **Table Editor** → `rides` between demo rounds.
 

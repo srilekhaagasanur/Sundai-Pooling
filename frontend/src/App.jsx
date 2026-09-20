@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import {
+  displayNameFromUser,
+  getSession,
+  onAuthStateChange,
+  signInWithGoogle,
+  signOut,
+} from "./lib/auth";
+import {
   cancelRide,
   confirmRide,
   createRide,
@@ -50,7 +57,9 @@ function StatusChip({ status, matchCount = 0 }) {
 }
 
 function App() {
-  const [name, setName] = useState("");
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [destination, setDestination] = useState("");
   const [currentRide, setCurrentRide] = useState(null);
   const [myRideId, setMyRideId] = useState(null);
@@ -61,13 +70,51 @@ function App() {
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState("");
 
-  const trimmedName = name.trim();
+  const user = session?.user ?? null;
+  const trimmedName = displayNameFromUser(user);
   const status = currentRide?.status;
   const isPaired = status === "pending" || status === "locked";
   const myMember = currentRide?.members?.find(
     (member) => member.name === trimmedName
   );
   const iConfirmed = Boolean(myMember?.confirmed);
+
+  useEffect(() => {
+    let active = true;
+
+    getSession()
+      .then((current) => {
+        if (active) {
+          setSession(current);
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading session:", err);
+      })
+      .finally(() => {
+        if (active) {
+          setAuthReady(true);
+        }
+      });
+
+    const subscription = onAuthStateChange((nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setCurrentRide(null);
+      setMyRideId(null);
+      setMatches([]);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!currentRide?.id) {
@@ -113,9 +160,43 @@ function App() {
     return () => clearInterval(intervalId);
   }, [currentRide?.id, currentRide?.status, myRideId, trimmedName]);
 
+  const handleSignIn = async () => {
+    setError("");
+    setAuthLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.error("Error signing in:", err);
+      setError(err.message || "Could not sign in with Google.");
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setError("");
+    setAuthLoading(true);
+    try {
+      await signOut();
+      setCurrentRide(null);
+      setMyRideId(null);
+      setMatches([]);
+      setDestination("");
+    } catch (err) {
+      console.error("Error signing out:", err);
+      setError(err.message || "Could not sign out.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!user) {
+      setError("Please sign in with Google first.");
+      return;
+    }
+
     if (!trimmedName) {
-      setError("Please enter your name.");
+      setError("Could not read your Google name. Try signing in again.");
       return;
     }
 
@@ -246,26 +327,56 @@ function App() {
     currentRide?.members?.find((member) => member.name !== trimmedName)
       ?.name || "your pair";
 
+  if (!authReady) {
+    return (
+      <div className="container">
+        <h1>RideMatch</h1>
+        <p>Loading…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container">
+        <h1>RideMatch</h1>
+        <p>Leaving 292 Main · pair up for a ride.</p>
+
+        <div className="ride-form auth-card">
+          <p className="auth-card__copy">
+            Sign in with Google to post or join a ride.
+          </p>
+          <button onClick={handleSignIn} disabled={authLoading}>
+            {authLoading ? "Redirecting…" : "Sign in with Google"}
+          </button>
+          {error ? <p className="error">{error}</p> : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
-      <h1>RideMatch 🚗</h1>
-
-      <p>Find students going your way.</p>
+      <div className="top-bar">
+        <div>
+          <h1>RideMatch</h1>
+          <p>Leaving 292 Main · pair up for a ride.</p>
+        </div>
+        <div className="top-bar__user">
+          <span className="top-bar__name">{trimmedName}</span>
+          <button
+            className="secondary-button top-bar__signout"
+            onClick={handleSignOut}
+            disabled={authLoading}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
 
       <div className="ride-form">
-        <label>Name</label>
-
-        <input
-          type="text"
-          placeholder="Enter your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={isPaired}
-        />
-
         <label>From</label>
-
-        <input type="text" value={FIXED_ORIGIN} disabled />
+        <div className="origin-pill">{FIXED_ORIGIN}</div>
 
         <label>Destination</label>
 
