@@ -360,6 +360,50 @@ export async function listOpenCandidates(ride) {
   );
 }
 
+/** All open rides with a free seat (for guest board / previews). */
+export async function listOpenRides() {
+  const { data, error } = await supabase
+    .from("rides")
+    .select(
+      "id, name, destination, dest_lat, dest_lng, place_id, created_at, members, status, user_id"
+    )
+    .eq("status", "open")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(rpcErrorMessage(error));
+  }
+
+  return (data || []).filter(
+    (ride) => Array.isArray(ride.members) && ride.members.length < MAX_RIDERS
+  );
+}
+
+export async function countOpenRides() {
+  const open = await listOpenRides();
+  return open.length;
+}
+
+/**
+ * Guest / pre-login preview: rank open rides near a destination.
+ */
+export async function previewMatchesForDestination({
+  destination,
+  placeId = null,
+  destLat = null,
+  destLng = null,
+}) {
+  const candidates = await listOpenRides();
+  const probe = {
+    id: -1,
+    destination,
+    place_id: placeId,
+    dest_lat: destLat,
+    dest_lng: destLng,
+  };
+  return rankMatchesHybrid(probe, candidates);
+}
+
 /**
  * Rank nearby open rides: haversine shortlist, then ORS road matrix when available.
  * Pass scorer only to force pure haversine (tests / offline).

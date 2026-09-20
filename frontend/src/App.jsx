@@ -4,6 +4,7 @@ import {
   buildUberStopPlan,
 } from "./lib/uber";
 import DestinationAutocomplete from "./components/DestinationAutocomplete";
+import GuestHome from "./components/GuestHome";
 import {
   displayNameFromUser,
   getSession,
@@ -11,6 +12,11 @@ import {
   signInWithGoogle,
   signOut,
 } from "./lib/auth";
+import {
+  clearGuestIntent,
+  loadGuestIntent,
+  saveGuestIntent,
+} from "./lib/guestIntent";
 import {
   cancelRide,
   confirmRide,
@@ -162,21 +168,103 @@ function App() {
 
     findActiveRideForRider({ userId: user.id, name: trimmedName })
       .then(async (activeRide) => {
-        if (!active || !activeRide) {
+        if (!active) {
           return;
         }
 
-        setCurrentRide(activeRide.ride);
-        setMyRideId(activeRide.myRideId);
-        setDestination(activeRide.ride.destination || "");
-        setPlaceId(activeRide.ride.place_id || null);
-        setDestLat(activeRide.ride.dest_lat ?? null);
-        setDestLng(activeRide.ride.dest_lng ?? null);
+        const intent = loadGuestIntent();
+        clearGuestIntent();
 
-        if (activeRide.ride.status === "open") {
-          const matchData = await findMatches(activeRide.ride);
-          if (active) {
-            setMatches(matchData);
+        if (activeRide) {
+          setCurrentRide(activeRide.ride);
+          setMyRideId(activeRide.myRideId);
+          setDestination(activeRide.ride.destination || "");
+          setPlaceId(activeRide.ride.place_id || null);
+          setDestLat(activeRide.ride.dest_lat ?? null);
+          setDestLng(activeRide.ride.dest_lng ?? null);
+
+          if (activeRide.ride.status === "open") {
+            // Guest came back to join someone while already open → try join.
+            if (
+              intent?.joinTargetId &&
+              intent.joinTargetId !== activeRide.ride.id
+            ) {
+              try {
+                const paired = await joinRide(
+                  intent.joinTargetId,
+                  activeRide.ride.id
+                );
+                if (active) {
+                  setMatches([]);
+                  setCurrentRide(paired);
+                }
+                return;
+              } catch (err) {
+                console.error("Error joining after sign-in:", err);
+                if (active) {
+                  setError(err.message || "Could not join that ride.");
+                }
+              }
+            }
+
+            const matchData = await findMatches(activeRide.ride);
+            if (active) {
+              setMatches(matchData);
+            }
+          }
+          return;
+        }
+
+        // No active ride — apply guest destination / join intent.
+        if (
+          intent?.destination &&
+          (intent.placeId || intent.destLat != null)
+        ) {
+          setDestination(intent.destination || "");
+          setPlaceId(intent.placeId || null);
+          setDestLat(intent.destLat ?? null);
+          setDestLng(intent.destLng ?? null);
+
+          if (intent.action === "post" || intent.action === "join") {
+            try {
+              const ride = await upsertOpenRide({
+                userId: user.id,
+                name: trimmedName,
+                source: FIXED_ORIGIN,
+                destination: intent.destination,
+                placeId: intent.placeId || null,
+                destLat: intent.destLat ?? null,
+                destLng: intent.destLng ?? null,
+              });
+              if (!active) {
+                return;
+              }
+              setCurrentRide(ride);
+              setMyRideId(ride.id);
+              setDestination(ride.destination);
+              setPlaceId(ride.place_id || null);
+              setDestLat(ride.dest_lat ?? null);
+              setDestLng(ride.dest_lng ?? null);
+
+              if (intent.action === "join" && intent.joinTargetId) {
+                const paired = await joinRide(intent.joinTargetId, ride.id);
+                if (active) {
+                  setMatches([]);
+                  setCurrentRide(paired);
+                }
+                return;
+              }
+
+              const matchData = await findMatches(ride);
+              if (active) {
+                setMatches(matchData);
+              }
+            } catch (err) {
+              console.error("Error applying guest intent:", err);
+              if (active) {
+                setError(err.message || "Could not continue after sign-in.");
+              }
+            }
           }
         }
       })
@@ -243,16 +331,22 @@ function App() {
     return () => clearInterval(intervalId);
   }, [currentRide?.id, currentRide?.status, myRideId, trimmedName, user?.id]);
 
-  const handleSignIn = async () => {
+  const handleGuestContinue = async (intent) => {
     setError("");
     setAuthLoading(true);
     try {
+      saveGuestIntent(intent || {});
       await signInWithGoogle();
     } catch (err) {
       console.error("Error signing in:", err);
+      clearGuestIntent();
       setError(err.message || "Could not sign in with Google.");
       setAuthLoading(false);
     }
+  };
+
+  const handleSignIn = async () => {
+    await handleGuestContinue({ action: "browse" });
   };
 
   const handleSignOut = async () => {
@@ -487,17 +581,22 @@ function App() {
   if (!user) {
     return (
       <div className="container">
-        <SiteHeader />
-
-        <div className="ride-form auth-card">
-          <p className="auth-card__copy">
-            Sign in with Google to post or join a ride.
-          </p>
-          <button onClick={handleSignIn} disabled={authLoading}>
-            {authLoading ? "Redirecting…" : "Sign in with Google"}
-          </button>
-          {error ? <p className="error">{error}</p> : null}
-        </div>
+        <SiteHeader
+          actions={
+            <button
+              className="secondary-button top-bar__signout"
+              onClick={handleSignIn}
+              disabled={authLoading}
+            >
+              {authLoading ? "Redirecting…" : "Sign in"}
+            </button>
+          }
+        />
+        <GuestHome
+          onContinue={handleGuestContinue}
+          authLoading={authLoading}
+          error={error}
+        />
       </div>
     );
   }
