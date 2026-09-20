@@ -182,6 +182,90 @@ body {
   margin: 0 0 12px;
 }
 
+.guest-public-board {
+  margin-top: 14px;
+}
+
+.guest-map {
+  margin: 0 0 14px;
+}
+
+.guest-map__canvas {
+  height: 220px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e4e7ec;
+  overflow: hidden;
+  background: #e8eef5;
+  z-index: 0;
+}
+
+.guest-map__credit {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #98a2b3;
+}
+
+.guest-map__ihq-icon {
+  background: transparent;
+  border: none;
+}
+
+.guest-map__marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+.guest-map__pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 140px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+}
+
+.guest-map__pin--ihq {
+  background: #0a7a32;
+  color: #fff;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+}
+
+.guest-map__pin--drop {
+  background: #111;
+  color: #fff;
+}
+
+.guest-map__ihq-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #0a7a32;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.guest-dest-list {
+  margin-top: 4px;
+}
+
+.guest-dest-list .person-card__name {
+  font-size: 15px;
+}
+
 .origin-pill {
   display: flex;
   flex-direction: column;
